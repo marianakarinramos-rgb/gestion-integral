@@ -1078,7 +1078,7 @@
         </div>
     </div>
 
-    <!-- LOGICA JS OPTIMIZADA Y FIREBASE -->
+    <!-- LOGICA JS OPTIMIZADA Y FIREBASE (SHARDING ACTIVADO) -->
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyDsnmGmAaRjIV1QbrNy6Hpn5NZG8yQNY0c",
@@ -1134,7 +1134,6 @@
         function repararNumeroDeformado(n) {
             if (typeof n !== 'number' || isNaN(n) || n <= 0) return 0;
             if (n < 5000000) return Math.round(n * 100) / 100;
-            
             for (let power of [12, 13, 14, 11, 15, 10, 9]) {
                 let candidate = n / Math.pow(10, power);
                 let rounded = Math.round(candidate);
@@ -1181,21 +1180,27 @@
             if(!db.config.nextPresupuesto) db.config.nextPresupuesto = 1;
             if(!db.config.nextRemito) db.config.nextRemito = 1;
             if(!db.usuarios || db.usuarios.length === 0) db.usuarios = [ { id: 'u1', nombre: 'Admin', pin: '1234', rol: 'admin' } ];
-            
-            ['empleados', 'productos', 'listasPrecio', 'clientes', 'caja', 'gastosFijos', 'presupuestos', 'entregas'].forEach(key => {
-                if (!Array.isArray(db[key])) db[key] = [];
-            });
-            
+            ['empleados', 'productos', 'listasPrecio', 'clientes', 'caja', 'gastosFijos', 'presupuestos', 'entregas'].forEach(key => { if (!Array.isArray(db[key])) db[key] = []; });
             if(db.listasPrecio.length === 0) db.listasPrecio.push({ id: '1', nombre: 'Precio Público (Web)', margen: 25, costoVariable: 0 });
         }
 
         let currentUser = null; let accionPendiente = null; let carrito = []; let carritoWeb = [];
 
+        // NUEVO: SISTEMA DE GUARDADO FRAGMENTADO (SHARDING PARA EVITAR LIMITE 1MB)
         function guardarBD() { 
             try {
                 localStorage.setItem('jorge_hogar_erp_v28', JSON.stringify(db));
                 if(esModoNube && firestoreDb) {
-                    firestoreDb.collection("erp").doc("jorge_hogar_v28").set(db).catch(e => console.warn("Error Sync:", e));
+                    let dbCore = { ...db };
+                    delete dbCore.productos; 
+                    
+                    firestoreDb.collection("erp").doc("jorge_hogar_core_v28").set(dbCore).catch(e => console.warn("Error Sync Core:", e));
+                    
+                    if(db.productos && db.productos.length > 0) {
+                        db.productos.forEach(p => {
+                            firestoreDb.collection("jorge_hogar_productos_v28").doc(p.id).set(p).catch(e => console.warn("Error Sync Prod:", e));
+                        });
+                    }
                 }
             } catch (e) { console.warn("Error al guardar:", e); }
         }
@@ -1228,56 +1233,49 @@
                             console.warn("Firebase demorado. Forzando inicio local.");
                             iniciarAppSegunRouting();
                         }
-                    }, 3000);
+                    }, 3500);
 
-                    try {
-                        firestoreDb.collection("erp").doc("jorge_hogar_v28").onSnapshot(doc => {
-                            clearTimeout(fallbackTimeout);
-                            try {
-                                if(doc.exists) { 
-                                    db = doc.data(); 
-                                    verificarIntegridadDB();
-                                    autoRepararPreciosCorruptos();
-                                } else { 
-                                    firestoreDb.collection("erp").doc("jorge_hogar_v28").set(db).catch(()=>{}); 
-                                }
-                                localStorage.setItem('jorge_hogar_erp_v28', JSON.stringify(db));
-                                
-                                if(!firebaseLoaded) {
-                                    firebaseLoaded = true; 
-                                    iniciarAppSegunRouting();
-                                } else {
-                                    if(currentUser) {
-                                        const userFresco = db.usuarios.find(u => u.id === currentUser.id);
-                                        if(userFresco && userFresco.rol !== currentUser.rol) { 
-                                            currentUser.rol = userFresco.rol; 
-                                            document.getElementById('lbl-rol-actual').innerText = currentUser.rol; 
-                                            aplicarPermisosRol(); 
-                                        }
-                                        actualizarUI();
-                                    } else if(!isTiendaWeb) {
-                                        const select = document.getElementById('login-user');
-                                        if(select) { 
-                                            const val = select.value; 
-                                            select.innerHTML = db.usuarios.map(u => `<option value="${u.id}">${u.nombre}</option>`).join(''); 
-                                            if(val) select.value = val; 
-                                        }
-                                    }
-                                    cargarDesplegablesVendedores();
-                                }
-                            } catch (innerError) {
-                                console.warn("Error interno DB:", innerError);
-                                if(!firebaseLoaded) { firebaseLoaded = true; iniciarAppSegunRouting(); }
-                            }
-                        }, error => {
-                            clearTimeout(fallbackTimeout);
-                            console.warn("Error de conexión Firebase:", error);
-                            if(!firebaseLoaded) { firebaseLoaded = true; iniciarAppSegunRouting(); }
-                        });
-                    } catch (e) {
+                    // 1. ESCUCHAR EL CORE
+                    firestoreDb.collection("erp").doc("jorge_hogar_core_v28").onSnapshot(doc => {
                         clearTimeout(fallbackTimeout);
+                        try {
+                            if(doc.exists) { 
+                                let cloudData = doc.data(); 
+                                cloudData.productos = db.productos || []; 
+                                db = cloudData; 
+                                verificarIntegridadDB();
+                            } else { 
+                                guardarBD(); 
+                            }
+                            localStorage.setItem('jorge_hogar_erp_v28', JSON.stringify(db));
+                            
+                            if(!firebaseLoaded) {
+                                firebaseLoaded = true; 
+                                iniciarAppSegunRouting();
+                            } else {
+                                actualizarPermisosYUI();
+                            }
+                        } catch (innerError) {
+                            console.warn("Error interno DB:", innerError);
+                            if(!firebaseLoaded) { firebaseLoaded = true; iniciarAppSegunRouting(); }
+                        }
+                    }, error => {
+                        clearTimeout(fallbackTimeout);
+                        console.warn("Error de conexión Firebase:", error);
                         if(!firebaseLoaded) { firebaseLoaded = true; iniciarAppSegunRouting(); }
-                    }
+                    });
+
+                    // 2. ESCUCHAR LOS PRODUCTOS (SIN LIMITE DE 1MB)
+                    firestoreDb.collection("jorge_hogar_productos_v28").onSnapshot(snapshot => {
+                        let productosNube = [];
+                        snapshot.forEach(doc => { productosNube.push(doc.data()); });
+                        if(productosNube.length > 0) {
+                            db.productos = productosNube;
+                            localStorage.setItem('jorge_hogar_erp_v28', JSON.stringify(db));
+                            if(firebaseLoaded) actualizarUI();
+                        }
+                    });
+
                 } else { 
                     iniciarAppSegunRouting();
                 }
@@ -1287,12 +1285,29 @@
             }
         });
 
+        function actualizarPermisosYUI() {
+            if(currentUser) {
+                const userFresco = db.usuarios.find(u => u.id === currentUser.id);
+                if(userFresco && userFresco.rol !== currentUser.rol) { 
+                    currentUser.rol = userFresco.rol; 
+                    document.getElementById('lbl-rol-actual').innerText = currentUser.rol; 
+                    aplicarPermisosRol(); 
+                }
+                actualizarUI();
+            } else if(!isTiendaWeb) {
+                const select = document.getElementById('login-user');
+                if(select) { 
+                    const val = select.value; 
+                    select.innerHTML = db.usuarios.map(u => `<option value="${u.id}">${u.nombre}</option>`).join(''); 
+                    if(val) select.value = val; 
+                }
+            }
+            cargarDesplegablesVendedores();
+        }
+
         function iniciarAppSegunRouting() {
             const overlay = document.getElementById('carga-overlay-global');
-            if(overlay) {
-                overlay.style.display = 'none';
-                overlay.classList.add('hidden');
-            }
+            if(overlay) { overlay.style.display = 'none'; overlay.classList.add('hidden'); }
 
             if (isTiendaWeb) {
                 document.getElementById('erp-container').classList.add('hidden');
@@ -1574,7 +1589,6 @@
             
             let vinculadas = 0;
             const skuMap = new Map();
-            // Buscar productos por SKU (exacto) o por Nombre
             db.productos.forEach(p => { 
                 if (p.sku) skuMap.set(String(p.sku).trim().toLowerCase(), p); 
                 if (p.nombre) skuMap.set(p.nombre.trim().toLowerCase(), p);
@@ -1768,7 +1782,12 @@
                 if(modulo === 'gastos') db.gastosFijos = []; 
                 if(modulo === 'presupuestos') { db.presupuestos = []; db.config.nextPresupuesto = 1; }
                 if(modulo === 'clientes') db.clientes = []; 
-                if(modulo === 'stock') db.productos = [];
+                if(modulo === 'stock') {
+                    if(esModoNube && firestoreDb) {
+                        db.productos.forEach(p => firestoreDb.collection("jorge_hogar_productos_v28").doc(p.id).delete().catch(()=>{}));
+                    }
+                    db.productos = [];
+                }
                 guardarBD(); actualizarUI(); mostrarToast(`Datos eliminados`, 'bg-[#ef4444]');
             });
         }
@@ -2236,7 +2255,15 @@
             else { db.productos.push({ id: generarId(), sku, nombre, costo, cantidad, imagenBase64: '' }); }
             guardarBD(); cerrarModal('modal-stock'); actualizarUI(); mostrarToast('Artículo guardado', 'bg-[#10b981]');
         }
-        function borrarStock(id) { pedirConfirmacion('¿Borrar este producto?', () => { db.productos = db.productos.filter(x => x.id !== id); guardarBD(); actualizarUI(); mostrarToast('Producto eliminado', 'bg-[#ef4444]'); }); }
+        function borrarStock(id) { 
+            pedirConfirmacion('¿Borrar este producto?', () => { 
+                db.productos = db.productos.filter(x => x.id !== id); 
+                if(esModoNube && firestoreDb) firestoreDb.collection("jorge_hogar_productos_v28").doc(id).delete().catch(()=>{});
+                guardarBD(); 
+                actualizarUI(); 
+                mostrarToast('Producto eliminado', 'bg-[#ef4444]'); 
+            }); 
+        }
 
         function abrirModalLista() { document.getElementById('lista-id').value = ''; document.getElementById('lista-nombre').value = ''; document.getElementById('lista-margen').value = ''; document.getElementById('lista-costo-var').value = ''; document.getElementById('modal-lista-title').innerText = 'Nueva Lista'; abrirModalUI('modal-lista'); }
         function editarLista(id) { const l = db.listasPrecio.find(x => x.id === id); if(!l) return; document.getElementById('lista-id').value = l.id; document.getElementById('lista-nombre').value = l.nombre; document.getElementById('lista-margen').value = l.margen; document.getElementById('lista-costo-var').value = l.costoVariable || 0; document.getElementById('modal-lista-title').innerText = 'Editar Lista'; abrirModalUI('modal-lista'); }
@@ -2369,262 +2396,6 @@
             calcularMeta();
         }
 
-        // ================= VISTA TIENDA PÚBLICA & CARRITO WEB =================
-        function abrirCatalogoEnNuevaPestana() {
-            if(db.productos.length === 0) return mostrarToast('No hay productos en stock.', 'bg-[#f59e0b]');
-            window.open(window.location.pathname + '?modo=tienda', '_blank');
-        }
-
-        function renderTiendaWeb() {
-            const search = document.getElementById('buscador-tienda').value.toLowerCase();
-            const filtrados = db.productos.filter(p => p.cantidad > 0 && (p.nombre.toLowerCase().includes(search) || (p.sku && p.sku.toLowerCase().includes(search))));
-            const grid = document.getElementById('grid-productos-tienda');
-            const listaPublica = db.listasPrecio[0]; 
-            
-            grid.innerHTML = filtrados.length ? filtrados.map(p => {
-                const precio = Math.round(listaPublica ? (p.costo * (1 + (listaPublica.margen / 100))) : p.costo);
-                const imgSrc = p.imagenBase64 || 'https://via.placeholder.com/300/1e293b/8b949e?text=Sin+Imagen';
-                return `
-                <div class="product-card">
-                    <img src="${imgSrc}" class="product-image" loading="lazy">
-                    <div class="p-4 flex flex-col flex-grow">
-                        <span class="text-[10px] text-[#00bfff] font-bold uppercase mb-1">SKU: ${p.sku || 'N/A'}</span>
-                        <h4 class="text-sm font-bold text-white mb-2 line-clamp-2">${p.nombre}</h4>
-                        <span class="text-[10px] text-[#8b949e] mb-2 font-bold">Disponibles: <strong class="text-white">${p.cantidad}</strong></span>
-                        <div class="mt-auto flex justify-between items-end">
-                            <span class="text-lg font-black text-[#10b981]">$${precio.toLocaleString('es-AR')}</span>
-                            <button onclick="agregarAlCarritoWeb('${p.id}', ${precio})" class="bg-[#00bfff] hover:bg-[#4dd2ff] text-[#050b14] w-10 h-10 rounded-full shadow-[0_0_10px_rgba(0,191,255,0.4)] transition flex items-center justify-center"><i class="fas fa-cart-plus"></i></button>
-                        </div>
-                    </div>
-                </div>`;
-            }).join('') : '<div class="col-span-full py-16 text-center text-[#8b949e] font-bold"><i class="fas fa-box-open text-4xl mb-3 block"></i> No hay artículos con stock disponibles en este momento.</div>';
-        }
-
-        function agregarAlCarritoWeb(id, precio) {
-            const prod = db.productos.find(x => x.id === id); if(!prod) return;
-            const exist = carritoWeb.find(x => x.id === id);
-            if(exist) { 
-                if(exist.cant < prod.cantidad) exist.cant++; 
-                else mostrarToast('Stock máximo alcanzado', 'bg-[#f59e0b]'); 
-            } else { 
-                carritoWeb.push({ id: prod.id, sku: prod.sku, nombre: prod.nombre, cant: 1, precio: precio, costoUnitario: prod.costo }); 
-            }
-            actualizarBadgeCarrito(); mostrarToast('Agregado al carrito', 'bg-[#10b981]');
-        }
-        
-        function actualizarBadgeCarrito() { 
-            const badge = document.getElementById('cart-badge'); const tot = carritoWeb.reduce((sum, i) => sum + i.cant, 0);
-            if(tot > 0) { badge.innerText = tot; badge.classList.remove('hidden'); } else { badge.classList.add('hidden'); }
-        }
-        
-        function abrirCarritoWeb() {
-            const list = document.getElementById('lista-carrito-web'); let html = ''; let total = 0;
-            if(carritoWeb.length === 0) { html = '<p class="text-center text-[#8b949e] font-bold py-10">Tu carrito está vacío.</p>'; } 
-            else {
-                html = carritoWeb.map((item, index) => {
-                    const sub = item.cant * item.precio; total += sub;
-                    return `<div class="flex justify-between items-center bg-[#0d1117] p-3 rounded-xl border border-[#30363d]"><div class="flex-grow"><h4 class="text-sm font-bold text-white line-clamp-1">${item.nombre}</h4><span class="text-xs text-[#8b949e] block mt-1">${item.cant}x $${item.precio.toLocaleString('es-AR')} = <strong class="text-[#00bfff]">$${sub.toLocaleString('es-AR')}</strong></span></div><div class="flex items-center gap-2"><button onclick="modificarCantWeb(${index}, -1)" class="bg-[#1e293b] text-white w-8 h-8 rounded-lg font-bold hover:bg-[#30363d]">-</button><span class="font-bold text-white px-1 text-sm">${item.cant}</span><button onclick="modificarCantWeb(${index}, 1)" class="bg-[#1e293b] text-white w-8 h-8 rounded-lg font-bold hover:bg-[#30363d]">+</button></div></div>`;
-                }).join('');
-            }
-            document.getElementById('total-carrito-web').innerText = '$' + total.toLocaleString('es-AR');
-            list.innerHTML = html; abrirModalUI('modal-carrito-web');
-        }
-        
-        function modificarCantWeb(index, delta) {
-            const item = carritoWeb[index]; const prod = db.productos.find(x => x.id === item.id);
-            item.cant += delta;
-            if(item.cant > prod.cantidad) { item.cant = prod.cantidad; mostrarToast('Stock máximo alcanzado', 'bg-[#f59e0b]'); }
-            if(item.cant <= 0) { carritoWeb.splice(index, 1); }
-            actualizarBadgeCarrito(); abrirCarritoWeb();
-        }
-
-        // ================= COMPRA DIRECTA WEB Y DESCUENTO AUTOMÁTICO =================
-        function finalizarCompraWebYDescontarStock() {
-            if(carritoWeb.length === 0) return mostrarToast('El carrito está vacío', 'bg-[#ef4444]');
-            const nombreCli = document.getElementById('web-cli-nombre').value.trim() || 'Cliente Web';
-            const telCli = document.getElementById('web-cli-tel').value.trim() || '-';
-            const dirCli = document.getElementById('web-cli-dir').value.trim() || 'Retiro en Local';
-
-            // NUEVO: CRM Automático
-            if (nombreCli !== 'Cliente Web') {
-                let clienteExistente = db.clientes.find(c => c.nombre.toLowerCase() === nombreCli.toLowerCase() || (c.tel !== '-' && c.tel === telCli));
-                if (!clienteExistente) {
-                    db.clientes.push({
-                        id: generarId(),
-                        nombre: nombreCli,
-                        tel: telCli,
-                        direccion: dirCli,
-                        tipo: 'Minorista'
-                    });
-                } else {
-                    // Actualizar datos si estaban vacíos
-                    if(clienteExistente.tel === '-' && telCli !== '-') clienteExistente.tel = telCli;
-                    if((clienteExistente.direccion === '-' || !clienteExistente.direccion) && dirCli !== 'Retiro en Local') clienteExistente.direccion = dirCli;
-                }
-            }
-
-            for(let item of carritoWeb) {
-                const prod = db.productos.find(p => p.id === item.id);
-                if(!prod || prod.cantidad < item.cant) {
-                    return mostrarToast(`No hay suficiente stock de "${item.nombre}".`, 'bg-[#ef4444]');
-                }
-            }
-
-            let totalVenta = 0; let totalCosto = 0; let detalles = [];
-            carritoWeb.forEach(item => {
-                const prod = db.productos.find(p => p.id === item.id);
-                if(prod) {
-                    prod.cantidad -= item.cant;
-                }
-                const sub = item.cant * item.precio;
-                totalVenta += sub;
-                totalCosto += (item.costoUnitario * item.cant);
-                detalles.push({ cant: item.cant, nombre: item.nombre, subtotal: sub, sku: item.sku || '' });
-            });
-
-            db.productos = db.productos.filter(p => p.cantidad > 0);
-
-            if(!db.config.nextPresupuesto) db.config.nextPresupuesto = 1;
-            const numPresStr = String(db.config.nextPresupuesto++).padStart(4, '0');
-            const fechaStr = hoyString(); 
-            const now = new Date(); 
-            const horaStr = `${now.getHours().toString().padStart(2,'0')}:${new Date().getMinutes().toString().padStart(2,'0')}`;
-            
-            db.presupuestos.push({
-                id: generarId(),
-                numero: numPresStr,
-                fecha: fechaStr,
-                hora: horaStr,
-                cliente: `${nombreCli} (Web - Tel: ${telCli})`,
-                vendedor: 'Tienda Web',
-                tipoEntrega: dirCli.toLowerCase().includes('retiro') ? 'Retiro en Local' : 'Envío a Domicilio',
-                direccion: dirCli,
-                totalVenta: totalVenta,
-                totalCosto: totalCosto,
-                totalCostoVar: 0,
-                // Etiqueta crucial para no descontar doble en caja
-                stockDescontado: true,
-                items: JSON.parse(JSON.stringify(carritoWeb.map(c => ({ id: generarId(), pId: c.id, nombre: c.nombre, listaNombre: 'Web', cant: c.cant, precioUnitario: c.precio, costoUnitario: c.costoUnitario, costoVarPerc: 0 })))),
-                detallesTexto: detalles.map(d => `${d.cant}x ${d.nombre}`).join(' | ')
-            });
-
-            let text = `Hola *${db.config.nombreEmpresa}*! 👋%0AConfirmé mi pedido web *PRES-${numPresStr}*:%0A%0A`;
-            detalles.forEach(item => {
-                text += `▪ *${item.cant}x* ${item.nombre} - $${item.subtotal.toLocaleString('es-AR')}%0A`;
-            });
-            text += `%0A*TOTAL: $${totalVenta.toLocaleString('es-AR')}*%0A`;
-            text += `*Cliente:* ${nombreCli}%0A*Tel:* ${telCli}%0A*Entrega:* ${dirCli}%0A%0A¡Muchas gracias!`;
-
-            guardarBD();
-            carritoWeb = [];
-            actualizarBadgeCarrito();
-            cerrarModal('modal-carrito-web');
-            renderTiendaWeb();
-            actualizarUI();
-
-            mostrarToast(`¡Pedido confirmado! Stock descontado con éxito`, 'bg-[#10b981]');
-
-            const phone = db.config.whatsappTurnos || '';
-            if(phone) {
-                setTimeout(() => { window.open(`https://wa.me/${phone}?text=${text}`, '_blank'); }, 500);
-            }
-        }
-
-        // ================= PDF EXPORT CATÁLOGO MEJORADO =================
-        async function generarPDFCatalogo() {
-            if(db.productos.length === 0) return mostrarToast('No hay productos para exportar.', 'bg-[#f59e0b]');
-            
-            const btn = document.querySelector('button[onclick="generarPDFCatalogo()"]');
-            if(btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Generando...'; }
-            
-            const { jsPDF } = window.jspdf; 
-            const doc = new jsPDF(); 
-            const listaPublica = db.listasPrecio[0]; 
-            const filtrados = db.productos.filter(p => p.cantidad > 0);
-            
-            // Fondo gris sutil para todo el documento
-            doc.setFillColor(245, 245, 245);
-            doc.rect(0, 0, 210, 297, 'F');
-            
-            doc.setFont("helvetica", "bold"); doc.setFontSize(22); doc.setTextColor(0, 191, 255);
-            doc.text(db.config.nombreEmpresa + " - Catálogo", 105, 18, null, null, "center");
-            doc.setFontSize(10); doc.setTextColor(100, 100, 100); doc.text(`Stock actualizado al: ${hoyString()}`, 105, 24, null, null, "center");
-            
-            let x = 15; let y = 35; 
-            const cardWidth = 55;
-            const cardHeight = 75;
-
-            // Función auxiliar para cargar imagen asíncrona y obtener proporciones reales
-            const cargarImagen = (src) => {
-                return new Promise((resolve, reject) => {
-                    const img = new Image();
-                    img.onload = () => resolve(img);
-                    img.onerror = () => reject(new Error('Img error'));
-                    img.src = src;
-                });
-            };
-
-            for (let i = 0; i < filtrados.length; i++) {
-                const p = filtrados[i];
-                
-                if (x > 150) { x = 15; y += (cardHeight + 10); }
-                if (y + cardHeight > 280) { 
-                    doc.addPage(); 
-                    doc.setFillColor(245, 245, 245);
-                    doc.rect(0, 0, 210, 297, 'F');
-                    y = 20; x = 15; 
-                }
-                
-                // Tarjeta blanca de fondo
-                doc.setFillColor(255, 255, 255);
-                doc.setDrawColor(220, 220, 220);
-                doc.roundedRect(x, y, cardWidth, cardHeight, 3, 3, 'FD');
-
-                // Lógica asíncrona para dibujar la imagen sin deformar
-                if(p.imagenBase64) { 
-                    try { 
-                        const imgElem = await cargarImagen(p.imagenBase64);
-                        const imgRatio = imgElem.width / imgElem.height;
-                        const boxSize = 45; // Tamaño máximo de la caja de imagen dentro de la tarjeta
-                        let drawW = boxSize;
-                        let drawH = boxSize;
-                        
-                        if (imgRatio > 1) { // Apaisada
-                            drawH = boxSize / imgRatio;
-                        } else { // Vertical o cuadrada
-                            drawW = boxSize * imgRatio;
-                        }
-                        
-                        // Centrar en la caja de 45x45
-                        const offsetX = x + 5 + ((boxSize - drawW) / 2);
-                        const offsetY = y + 5 + ((boxSize - drawH) / 2);
-                        
-                        doc.addImage(p.imagenBase64, 'JPEG', offsetX, offsetY, drawW, drawH); 
-                    } catch(e) {
-                        doc.setDrawColor(200); doc.rect(x + 5, y + 5, 45, 45); doc.text("Sin Foto", x + 15, y + 30);
-                    } 
-                } else { 
-                    doc.setFillColor(240, 240, 240); doc.rect(x + 5, y + 5, 45, 45, 'F'); 
-                    doc.setTextColor(150, 150, 150); doc.setFontSize(8); doc.text("Sin Imagen", x + 20, y + 28); 
-                }
-                
-                doc.setFontSize(7); doc.setTextColor(100, 100, 100); doc.setFont("helvetica", "bold");
-                doc.text(`SKU: ${p.sku||'-'}`, x + 5, y + 55);
-                
-                doc.setFontSize(8); doc.setTextColor(30, 30, 30); doc.setFont("helvetica", "normal");
-                const splitName = doc.splitTextToSize(p.nombre, cardWidth - 10); 
-                doc.text(splitName, x + 5, y + 60);
-                
-                const precio = Math.round(listaPublica ? (p.costo * (1 + (listaPublica.margen / 100))) : p.costo);
-                doc.setFontSize(11); doc.setTextColor(16, 185, 129); doc.setFont("helvetica", "bold");
-                doc.text(`$${precio.toLocaleString('es-AR')}`, x + 5, y + 71);
-                
-                x += (cardWidth + 8);
-            }
-            
-            doc.save(`Catalogo_${db.config.nombreEmpresa.replace(/\s+/g, '_')}.pdf`);
-            if(btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-pdf mr-2"></i> Descargar PDF'; }
-        }
     </script>
 </body>
 </html>
