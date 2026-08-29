@@ -11,11 +11,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-    <script>
-        window.onerror = function(msg, url, line) {
-            if(!msg.includes("Script error")) alert("Oops! Hubo un problema al cargar:\n" + msg + "\nLínea: " + line);
-        };
-    </script>
     <style>
         :root { --brand-primary: #00bfff; --brand-dark: #050b14; }
         * { box-sizing: border-box; }
@@ -143,6 +138,7 @@
         <main class="flex-grow flex flex-col h-[calc(100vh-4rem)] md:h-screen relative overflow-y-auto">
             <div id="toast-container"></div>
             <div class="p-4 md:p-6 lg:p-8 max-w-[1400px] mx-auto w-full pt-16 md:pt-6">
+                
                 <div class="flex justify-end mb-4 md:mb-6 w-full hidden md:flex">
                     <div class="flex items-center gap-3 bg-[#0d1117]/80 backdrop-blur px-4 py-2 rounded-xl border border-[#30363d] shadow-sm">
                         <div class="text-right">
@@ -258,49 +254,7 @@
                     </div>
                 </div>
 
-                <!-- TAB: CLIENTES -->
-                <div id="tab-clientes" class="tab-content hidden fade-in">
-                    <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4">
-                        <div>
-                            <h2 class="text-2xl md:text-3xl font-bold text-white mb-1">Base de Clientes</h2>
-                            <p class="text-[#8b949e] text-sm">Directorio e historial de ventas.</p>
-                        </div>
-                        <div class="flex flex-col md:flex-row gap-2 w-full md:w-auto">
-                            <button onclick="vaciarDatosMasivos('clientes')" class="admin-only hidden md:flex bg-[#0d1117] border border-[#30363d] text-[#ef4444] hover:bg-[#30363d] px-3 py-2 rounded-lg font-bold shadow-sm transition items-center text-xs">
-                                <i class="fas fa-trash-alt mr-1"></i> Vaciar Clientes
-                            </button>
-                            <button onclick="descargarPlantilla('clientes')" class="admin-only bg-[#0d1117] text-[#00bfff] border border-[#30363d] font-bold px-4 py-2.5 rounded-xl shadow-sm flex items-center justify-center text-sm hover:bg-[#30363d] hover:text-white transition">
-                                <i class="fas fa-download mr-2"></i> Plantilla Excel
-                            </button>
-                            <label class="admin-only btn-excel font-bold px-4 py-2.5 rounded-xl shadow-[0_0_10px_rgba(16,185,129,0.2)] flex items-center justify-center text-sm cursor-pointer w-full md:w-auto transition">
-                                <i class="fas fa-file-import mr-2"></i> Importar Masivo
-                                <input type="file" accept=".xlsx, .xls" class="hidden" onchange="importarExcel('clientes', event)">
-                            </label>
-                            <button onclick="abrirModalCliente()" class="w-full md:w-auto bg-[#00bfff] hover:bg-[#4dd2ff] text-[#050b14] px-5 py-2.5 rounded-xl font-bold shadow-[0_0_15px_rgba(0,191,255,0.3)] transition flex justify-center items-center text-sm">
-                                <i class="fas fa-user-plus mr-2"></i> Nuevo
-                            </button>
-                        </div>
-                    </div>
-                    <div class="relative bg-[#161b22] rounded-xl shadow-sm border border-[#30363d] flex items-center mb-6">
-                        <i class="fas fa-search absolute left-4 text-[#8b949e]"></i>
-                        <input type="text" id="buscador-clientes" placeholder="Buscar cliente por nombre..." oninput="debouncedRenderClientes()" class="w-full pl-12 pr-4 py-3 border-none bg-transparent outline-none focus:ring-0 text-white font-bold">
-                    </div>
-                    <div class="bg-[#161b22]/90 backdrop-blur rounded-2xl shadow-xl border border-[#30363d] overflow-hidden">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="bg-[#0d1117] border-b border-[#30363d] text-[10px] text-[#8b949e] font-bold uppercase tracking-widest">
-                                    <th class="py-4 px-4">Nombre y Apellido</th>
-                                    <th class="py-4 px-4">Teléfono</th>
-                                    <th class="py-4 px-4">Dirección</th>
-                                    <th class="py-4 px-4 text-center">Tipo</th>
-                                    <th class="py-4 px-4 text-center w-24">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="lista-clientes-tabla" class="divide-y divide-[#30363d] text-sm"></tbody>
-                        </table>
-                    </div>
-                </div>
-<!-- TAB: CAJA DIARIA -->
+                <!-- TAB: CAJA DIARIA -->
                 <div id="tab-caja" class="tab-content hidden fade-in">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
                         <div>
@@ -399,6 +353,49 @@
                                 </tr>
                             </thead>
                             <tbody id="lista-entregas-tabla" class="divide-y divide-[#30363d] text-sm"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB: CLIENTES -->
+                <div id="tab-clientes" class="tab-content hidden fade-in">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4">
+                        <div>
+                            <h2 class="text-2xl md:text-3xl font-bold text-white mb-1">Base de Clientes</h2>
+                            <p class="text-[#8b949e] text-sm">Directorio e historial de ventas.</p>
+                        </div>
+                        <div class="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+                            <button onclick="vaciarDatosMasivos('clientes')" class="admin-only hidden md:flex bg-[#0d1117] border border-[#30363d] text-[#ef4444] hover:bg-[#30363d] px-3 py-2 rounded-lg font-bold shadow-sm transition items-center text-xs">
+                                <i class="fas fa-trash-alt mr-1"></i> Vaciar Clientes
+                            </button>
+                            <button onclick="descargarPlantilla('clientes')" class="admin-only bg-[#0d1117] text-[#00bfff] border border-[#30363d] font-bold px-4 py-2.5 rounded-xl shadow-sm flex items-center justify-center text-sm hover:bg-[#30363d] hover:text-white transition">
+                                <i class="fas fa-download mr-2"></i> Plantilla Excel
+                            </button>
+                            <label class="admin-only btn-excel font-bold px-4 py-2.5 rounded-xl shadow-[0_0_10px_rgba(16,185,129,0.2)] flex items-center justify-center text-sm cursor-pointer w-full md:w-auto transition">
+                                <i class="fas fa-file-import mr-2"></i> Importar Masivo
+                                <input type="file" accept=".xlsx, .xls" class="hidden" onchange="importarExcel('clientes', event)">
+                            </label>
+                            <button onclick="abrirModalCliente()" class="w-full md:w-auto bg-[#00bfff] hover:bg-[#4dd2ff] text-[#050b14] px-5 py-2.5 rounded-xl font-bold shadow-[0_0_15px_rgba(0,191,255,0.3)] transition flex justify-center items-center text-sm">
+                                <i class="fas fa-user-plus mr-2"></i> Nuevo
+                            </button>
+                        </div>
+                    </div>
+                    <div class="relative bg-[#161b22] rounded-xl shadow-sm border border-[#30363d] flex items-center mb-6">
+                        <i class="fas fa-search absolute left-4 text-[#8b949e]"></i>
+                        <input type="text" id="buscador-clientes" placeholder="Buscar cliente por nombre..." oninput="debouncedRenderClientes()" class="w-full pl-12 pr-4 py-3 border-none bg-transparent outline-none focus:ring-0 text-white font-bold">
+                    </div>
+                    <div class="bg-[#161b22]/90 backdrop-blur rounded-2xl shadow-xl border border-[#30363d] overflow-hidden">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-[#0d1117] border-b border-[#30363d] text-[10px] text-[#8b949e] font-bold uppercase tracking-widest">
+                                    <th class="py-4 px-4">Nombre y Apellido</th>
+                                    <th class="py-4 px-4">Teléfono</th>
+                                    <th class="py-4 px-4">Dirección</th>
+                                    <th class="py-4 px-4 text-center">Tipo</th>
+                                    <th class="py-4 px-4 text-center w-24">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lista-clientes-tabla" class="divide-y divide-[#30363d] text-sm"></tbody>
                         </table>
                     </div>
                 </div>
@@ -812,7 +809,280 @@
             </div>
         </main>
     </div>
-<!-- LOGICA JS OPTIMIZADA Y FIREBASE (SHARDING ACTIVADO) -->
+
+    <!-- INICIO DEL SCRIPT JS (PARTE 2 SE PEGARÁ DEBAJO DE ESTA LÍNEA) -->
+<!-- ================= CATÁLOGO PÚBLICO (MODO WEBSTORE / EXTERNO) ================= -->
+    <div id="public-catalog" class="hidden flex-col fixed inset-0 bg-[#050b14] z-[99999] overflow-y-auto">
+        <header class="bg-[#0d1117] border-b border-[#30363d] sticky top-0 z-10 px-4 md:px-8 py-4 flex justify-between items-center shadow-lg">
+            <div class="flex items-center gap-3">
+                <img id="store-logo" src="https://via.placeholder.com/150/161b22/8b949e?text=Logo" class="w-10 h-10 object-cover rounded-lg border border-[#30363d]">
+                <div>
+                    <h1 id="store-name" class="text-xl font-bold text-white">Mi Tienda</h1>
+                    <span class="text-[10px] text-[#10b981] font-bold block"><i class="fas fa-check-circle mr-1"></i> Stock en Vivo</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <button onclick="abrirCarritoWeb()" class="relative text-white hover:text-[#00bfff] text-2xl transition bg-[#161b22] border border-[#30363d] w-11 h-11 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-shopping-bag"></i>
+                    <span id="cart-badge" class="absolute -top-2 -right-2 bg-[#ef4444] text-white text-[10px] font-bold px-2 py-0.5 rounded-full hidden">0</span>
+                </button>
+            </div>
+        </header>
+        <div class="px-4 md:px-8 py-6 bg-[#161b22] border-b border-[#30363d]">
+            <div class="max-w-4xl mx-auto relative">
+                <i class="fas fa-search absolute left-4 top-3.5 text-[#8b949e]"></i>
+                <input type="text" id="buscador-tienda" placeholder="Buscar productos por nombre o código SKU..." oninput="debouncedRenderTienda()" class="w-full bg-[#0d1117] border border-[#30363d] text-white pl-12 pr-4 py-3 rounded-xl font-bold focus:border-[#00bfff] outline-none">
+            </div>
+        </div>
+        <div class="flex-grow p-4 md:p-8 overflow-y-auto">
+            <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6" id="grid-productos-tienda">
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CARRITO WEB Y CHECKOUT DIRECTO -->
+    <div id="modal-carrito-web" class="fixed inset-0 bg-[#050b14]/90 hidden items-center justify-center p-4 backdrop-blur-sm" style="z-index: 999999;">
+        <div class="bg-[#161b22] border border-[#30363d] rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden fade-in flex flex-col max-h-[90vh]">
+            <div class="p-5 border-b border-[#30363d] bg-[#0d1117] flex justify-between items-center">
+                <h3 class="text-lg font-bold text-white"><i class="fas fa-shopping-cart text-[#00bfff] mr-2"></i> Tu Pedido Online</h3>
+                <button onclick="cerrarModal('modal-carrito-web')" class="text-[#8b949e] hover:text-[#ef4444] text-xl transition"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="flex-grow overflow-y-auto p-4 space-y-3" id="lista-carrito-web"></div>
+            
+            <div class="p-5 bg-[#0d1117] border-t border-[#30363d] space-y-3">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                    <div>
+                        <label class="text-[9px] font-bold text-[#8b949e] uppercase block mb-1">Nombre Completo</label>
+                        <input type="text" id="web-cli-nombre" placeholder="Tu Nombre" class="w-full border border-[#30363d] p-2 rounded-lg bg-[#161b22] text-white outline-none">
+                    </div>
+                    <div>
+                        <label class="text-[9px] font-bold text-[#8b949e] uppercase block mb-1">Teléfono</label>
+                        <input type="text" id="web-cli-tel" placeholder="Ej: 11 2233 4455" class="w-full border border-[#30363d] p-2 rounded-lg bg-[#161b22] text-white outline-none">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="text-[9px] font-bold text-[#8b949e] uppercase block mb-1">Entrega / Dirección</label>
+                        <input type="text" id="web-cli-dir" placeholder="Dirección de entrega o 'Retiro en Local'" class="w-full border border-[#30363d] p-2 rounded-lg bg-[#161b22] text-white outline-none">
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center pt-2 border-t border-[#30363d]">
+                    <span class="text-[#8b949e] font-bold uppercase text-xs">Total de la Compra</span>
+                    <h3 class="text-2xl font-black text-[#10b981]" id="total-carrito-web">$0</h3>
+                </div>
+
+                <button onclick="finalizarCompraWebYDescontarStock()" class="w-full bg-[#10b981] hover:bg-[#34d399] text-[#050b14] py-3 rounded-xl font-bold shadow-[0_0_15px_rgba(16,185,129,0.3)] transition flex justify-center items-center text-sm">
+                    <i class="fab fa-whatsapp mr-2 text-lg"></i> Confirmar Pedido por WhatsApp
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= MODALES ERP ================= -->
+    <div id="modal-confirm" class="fixed inset-0 bg-[#050b14]/90 hidden items-center justify-center p-4 backdrop-blur-sm" style="z-index: 999999;">
+        <div class="bg-[#161b22] border border-[#30363d] rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden text-center p-6 fade-in">
+            <div class="w-16 h-16 bg-[#ef4444]/10 text-[#ef4444] rounded-full flex items-center justify-center mx-auto mb-4 text-2xl border border-[#ef4444]/30"><i class="fas fa-exclamation-triangle"></i></div>
+            <h3 class="text-xl font-bold text-white mb-2">¿Estás seguro/a?</h3>
+            <p id="confirm-msg" class="text-sm text-[#8b949e] mb-6 font-medium">Esta acción no se puede deshacer.</p>
+            <div class="flex gap-3">
+                <button onclick="cerrarModal('modal-confirm')" class="flex-1 bg-[#0d1117] text-[#8b949e] border border-[#30363d] py-3 rounded-xl font-bold hover:bg-[#30363d] hover:text-white transition">Cancelar</button>
+                <button id="btn-confirmar-accion" onclick="if(accionPendiente) accionPendiente(); cerrarModal('modal-confirm');" class="flex-1 bg-[#ef4444] text-white py-3 rounded-xl font-bold hover:bg-[#dc2626] transition shadow-[0_0_10px_rgba(239,68,68,0.4)]">Sí, confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-cobro" class="fixed inset-0 bg-[#050b14]/90 hidden items-center justify-center p-4 backdrop-blur-sm" style="z-index: 999998;">
+        <div class="bg-[#161b22] border border-[#30363d] rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden fade-in">
+            <div class="p-6 border-b border-[#30363d] bg-[#0d1117] flex justify-between items-center">
+                <h3 class="text-xl font-bold text-white">Cobrar e Imprimir Remito</h3>
+                <button onclick="cerrarModal('modal-cobro')" class="text-[#8b949e] hover:text-[#ef4444] text-xl"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="cobro-presupuesto-id">
+                <div class="bg-[#161b22] border border-[#00bfff]/30 rounded-xl p-4 text-center mb-4 shadow-[0_0_15px_rgba(0,191,255,0.1)]">
+                    <p class="text-[10px] font-bold text-[#00bfff] uppercase tracking-widest mb-1">A Cobrar</p>
+                    <h3 class="text-4xl font-black text-white" id="cobro-monto-total">$0</h3>
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-[#8b949e] uppercase tracking-widest block mb-1">Medio de Pago</label>
+                    <select id="cobro-metodo" class="w-full border border-[#30363d] p-3 rounded-xl bg-[#0d1117] outline-none text-sm font-bold text-white focus:border-[#00bfff]">
+                        <option value="Efectivo">💵 Efectivo (Billetes)</option>
+                        <option value="Mercado Pago">📱 Mercado Pago</option>
+                        <option value="Transferencia">🏦 Transferencia / Tarjeta</option>
+                        <option value="Contraentrega">🚚 Contraentrega (A rendir por chofer)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="p-4 border-t border-[#30363d] bg-[#0d1117] flex justify-end gap-3">
+                <button id="btn-conf-cobro" onclick="confirmarCobroPresupuesto()" class="w-full bg-[#10b981] text-[#050b14] font-bold py-3 rounded-xl shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:bg-[#34d399] transition flex items-center justify-center">
+                    <i class="fas fa-print mr-2"></i> Procesar e Imprimir Remito
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-rendicion" class="fixed inset-0 bg-[#050b14]/90 hidden items-center justify-center p-4 backdrop-blur-sm" style="z-index: 999998;">
+        <div class="bg-[#161b22] border border-[#30363d] rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden fade-in">
+            <div class="p-6 border-b border-[#30363d] flex justify-between items-center bg-[#0d1117]">
+                <h3 class="text-xl font-bold text-white"><i class="fas fa-hand-holding-usd text-[#10b981] mr-2"></i> Rendir Dinero</h3>
+                <button onclick="cerrarModal('modal-rendicion')" class="text-[#8b949e] hover:text-[#ef4444] text-xl"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="rendir-id">
+                <p class="text-sm text-[#8b949e]">Ingresa el dinero a la caja. ¿Cómo pagó finalmente el cliente al chofer?</p>
+                <label class="text-[10px] font-bold text-[#8b949e] uppercase tracking-widest block mb-1">Método de Pago Real</label>
+                <select id="rendir-metodo-real" class="w-full border border-[#30363d] p-3 rounded-xl bg-[#0d1117] outline-none text-sm font-bold text-white focus:border-[#00bfff]">
+                    <option value="Efectivo">Efectivo (Billetes)</option>
+                    <option value="Mercado Pago">Mercado Pago</option>
+                    <option value="Transferencia">Transferencia</option>
+                </select>
+            </div>
+            <div class="p-4 border-t border-[#30363d] bg-[#0d1117]">
+                <button id="btn-conf-rendicion" onclick="confirmarRendicion()" class="w-full bg-[#10b981] text-[#050b14] font-bold py-3 rounded-xl hover:bg-[#34d399] transition shadow-[0_0_15px_rgba(16,185,129,0.3)]">Confirmar Ingreso a Caja Diaria</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-nc" class="fixed inset-0 bg-[#050b14]/90 hidden items-center justify-center p-4 backdrop-blur-sm" style="z-index: 999998;">
+        <div class="bg-[#161b22] border border-[#30363d] rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden fade-in">
+            <div class="p-6 border-b border-[#30363d] flex justify-between items-center bg-[#0d1117]">
+                <h3 class="text-xl font-bold text-white"><i class="fas fa-undo text-[#ef4444] mr-2"></i> Nota de Crédito</h3>
+                <button onclick="cerrarModal('modal-nc')" class="text-[#8b949e] hover:text-[#ef4444] text-xl"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="nc-id">
+                <div class="bg-[#ef4444]/10 border border-[#ef4444]/30 rounded-xl p-3 mb-2">
+                    <p class="text-xs text-[#ef4444] font-bold"><i class="fas fa-info-circle mr-1"></i> Se anulará el remito y se emitirá un gasto automático en la caja diaria.</p>
+                </div>
+                <label class="text-[10px] font-bold text-[#8b949e] uppercase tracking-widest block mb-1">Motivo y Destino del Stock</label>
+                <select id="nc-motivo" class="w-full border border-[#ef4444]/50 p-3 rounded-xl bg-[#0d1117] outline-none text-sm font-bold text-white focus:border-[#ef4444]">
+                    <option value="arrepentimiento">Arrepentimiento / Cambio (Devolver items al Stock)</option>
+                    <option value="falla">Roto / Falla (Perdido, NO vuelve a Stock)</option>
+                </select>
+            </div>
+            <div class="p-4 border-t border-[#30363d] bg-[#0d1117]">
+                <button id="btn-conf-nc" onclick="confirmarNC()" class="w-full bg-[#ef4444] text-white font-bold py-3 rounded-xl shadow-[0_0_15px_rgba(239,68,68,0.3)] hover:bg-[#dc2626] transition">Emitir N.C y Anular Remito</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-empleado" class="fixed inset-0 bg-[#050b14]/90 hidden items-center justify-center p-4 backdrop-blur-sm" style="z-index: 999998;">
+        <div class="bg-[#161b22] border border-[#30363d] rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden fade-in">
+            <div class="p-6 border-b border-[#30363d] bg-[#0d1117] flex justify-between items-center">
+                <h3 class="text-xl font-bold text-white" id="modal-empleado-title">Ficha de Empleado y Acceso</h3>
+                <button onclick="cerrarModal('modal-empleado')" class="text-[#8b949e] hover:text-[#ef4444] text-xl"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                <input type="hidden" id="emp-id">
+                <h4 class="text-sm font-bold text-[#00bfff] border-b border-[#30363d] pb-2">1. Datos Personales</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-2">
+                        <label class="text-[10px] font-bold text-[#8b949e] uppercase tracking-widest block mb-1">Nombre Completo (Usuario)</label>
+                        <input type="text" id="emp-nombre" class="w-full border border-[#30363d] p-3 rounded-xl bg-[#0d1117] outline-none text-sm font-bold text-white focus:border-[#00bfff]" required>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-[#8b949e] uppercase tracking-widest block mb-1">Teléfono Contacto</label>
+                        <input type="text" id="emp-tel" class="w-full border border-[#30363d] p-3 rounded-xl bg-[#0d1117] outline-none text-sm font-bold text-white focus:border-[#00bfff]">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-[#8b949e] uppercase tracking-widest block mb-1">Teléfono Familiar</label>
+                        <input type="text" id="emp-telfam" class="w-full border border-[#30363d] p-3 rounded-xl bg-[#0d1117] outline-none text-sm font-bold text-white focus:border-[#00bfff]">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="text-[10px] font-bold text-[#8b949e] uppercase tracking-widest block mb-1">Dirección</label>
+                        <input type="text" id="emp-dir" class="w-full border border-[#30363d] p-3 rounded-xl bg-[#0d1117] outline-none text-sm font-bold text-white focus:border-[#00bfff]">
+                    </div>
+                </div>
+
+                <h4 class="text-sm font-bold text-[#10b981] border-b border-[#30363d] pb-2 mt-6">2. Contratación</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-[10px] font-bold text-[#8b949e] uppercase tracking-widest block mb-1">Fecha de Ingreso</label>
+                        <input type="date" id="emp-ingreso" class="w-full border border-[#30363d] p-3 rounded-xl bg-[#0d1117] outline-none text-sm font-bold text-white focus:border-[#10b981]">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-[#8b949e] uppercase tracking-widest block mb-1">Sueldo Base ($)</label>
+                        <input type="number" id="emp-sueldo" class="w-full border border-[#30363d] p-3 rounded-xl bg-[#0d1117] outline-none text-sm font-bold text-white focus:border-[#10b981]" required>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-[#8b949e] uppercase tracking-widest block mb-1">Comisión (%)</label>
+                        <input type="number" id="emp-comision" step="0.1" value="1.5" class="w-full border border-[#30363d] p-3 rounded-xl bg-[#0d1117] outline-none text-sm font-bold text-white focus:border-[#00bfff]" required>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-[#8b949e] uppercase tracking-widest block mb-1">Modalidad de Pago</label>
+                        <select id="emp-modalidad" class="w-full border border-[#30363d] p-3 rounded-xl bg-[#0d1117] outline-none text-sm font-bold text-white focus:border-[#10b981]">
+                            <option value="Mensual">Mensual</option>
+                            <option value="Quincenal">Quincenal</option>
+                            <option value="Semanal">Semanal</option>
+                        </select>
+                    </div>
+                </div>
+
+                <h4 class="text-sm font-bold text-[#ef4444] border-b border-[#30363d] pb-2 mt-6">3. Permisos de Acceso</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-[10px] font-bold text-[#ef4444] uppercase tracking-widest block mb-1">PIN de Ingreso (4 dígitos)</label>
+                        <input type="text" id="emp-pin" maxlength="4" placeholder="1234" class="w-full border border-[#ef4444]/30 p-3 rounded-xl bg-[#0d1117] outline-none text-sm font-bold text-white text-center tracking-[0.5em] focus:border-[#ef4444]" required>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-[#ef4444] uppercase tracking-widest block mb-1">Rol en el Sistema</label>
+                        <select id="emp-rol" class="w-full border border-[#ef4444]/30 p-3 rounded-xl bg-[#0d1117] outline-none text-sm font-bold text-white focus:border-[#ef4444]">
+                            <option value="vendedor">Vendedor (Solo Factura y Lectura Catálogo)</option>
+                            <option value="cajero">Cajero (Cobra y Remito)</option>
+                            <option value="admin">Administrador (Total)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="p-4 border-t border-[#30363d] bg-[#0d1117] flex justify-end gap-3">
+                <button onclick="guardarEmpleado()" class="bg-[#00bfff] text-[#050b14] px-8 py-3 rounded-xl font-bold shadow-[0_0_15px_rgba(0,191,255,0.3)] hover:bg-[#4dd2ff] transition w-full">Guardar Ficha y Accesos</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-stock" class="fixed inset-0 bg-[#050b14]/90 hidden items-center justify-center p-4 backdrop-blur-sm" style="z-index: 999998;">
+        <div class="bg-[#161b22] border border-[#30363d] rounded-3xl w-full max-w-md shadow-2xl overflow-hidden fade-in">
+            <div class="p-6 border-b border-[#30363d] bg-[#0d1117] flex justify-between items-center"><h3 class="text-xl font-bold text-white" id="modal-stock-title">Artículo</h3><button onclick="cerrarModal('modal-stock')" class="text-[#8b949e] hover:text-[#ef4444] text-xl"><i class="fas fa-times"></i></button></div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="stock-id">
+                <div><label class="text-[10px] font-bold text-[#8b949e] uppercase tracking-widest block mb-1">SKU / Código Numérico</label><input type="text" id="stock-sku" class="w-full border border-[#30363d] p-3 rounded-xl bg-[#0d1117] outline-none text-sm font-bold text-white focus:border-[#00bfff]" required></div>
+                <div><label class="text-[10px] font-bold text-[#8b949e] uppercase tracking-widest block mb-1">Nombre</label><input type="text" id="stock-nombre" class="w-full border border-[#30363d] p-3 rounded-xl bg-[#0d1117] outline-none text-sm font-bold text-white focus:border-[#00bfff]" required></div>
+                <div class="admin-only"><label class="text-[10px] font-bold text-[#8b949e] uppercase tracking-widest block mb-1">Costo Base ($)</label><input type="number" id="stock-costo" step="0.01" class="w-full border border-[#30363d] p-3 rounded-xl bg-[#0d1117] outline-none text-sm font-bold text-white focus:border-[#00bfff]"></div>
+                <div><label class="text-[10px] font-bold text-[#8b949e] uppercase tracking-widest block mb-1">Stock Físico</label><input type="number" id="stock-cantidad" class="w-full border border-[#30363d] p-3 rounded-xl bg-[#0d1117] outline-none text-sm font-bold text-white focus:border-[#00bfff]" required></div>
+            </div>
+            <div class="p-4 border-t border-[#30363d] bg-[#0d1117] flex justify-end"><button onclick="guardarStock()" class="w-full bg-[#00bfff] text-[#050b14] py-3 rounded-xl font-bold transition">Guardar</button></div>
+        </div>
+    </div>
+
+    <div id="modal-lista" class="fixed inset-0 bg-[#050b14]/90 hidden items-center justify-center p-4 backdrop-blur-sm" style="z-index: 999998;">
+        <div class="bg-[#161b22] border border-[#30363d] rounded-3xl w-full max-w-md shadow-2xl overflow-hidden fade-in">
+            <div class="p-6 border-b border-[#30363d] bg-[#0d1117] flex justify-between items-center"><h3 class="text-xl font-bold text-white" id="modal-lista-title">Lista</h3><button onclick="cerrarModal('modal-lista')" class="text-[#8b949e] hover:text-[#ef4444] text-xl"><i class="fas fa-times"></i></button></div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="lista-id">
+                <div><label class="text-[10px] font-bold text-[#8b949e] uppercase tracking-widest block mb-1">Nombre</label><input type="text" id="lista-nombre" class="w-full border border-[#30363d] p-3 rounded-xl bg-[#0d1117] outline-none text-sm font-bold text-white" required></div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="text-[10px] font-bold text-[#00bfff] uppercase tracking-widest block mb-1">Remarque (%)</label><input type="number" step="0.1" id="lista-margen" class="w-full border border-[#00bfff]/30 p-2 rounded-lg bg-[#0d1117] outline-none text-sm text-center text-white" required></div>
+                    <div><label class="text-[10px] font-bold text-[#ef4444] uppercase tracking-widest block mb-1">Costo Var (%)</label><input type="number" step="0.1" id="lista-costo-var" class="w-full border border-[#ef4444]/30 p-2 rounded-lg bg-[#0d1117] outline-none text-sm text-center text-white"></div>
+                </div>
+            </div>
+            <div class="p-4 border-t border-[#30363d] bg-[#0d1117] flex justify-end"><button onclick="guardarLista()" class="w-full bg-[#00bfff] text-[#050b14] py-3 rounded-xl font-bold transition">Guardar</button></div>
+        </div>
+    </div>
+
+    <div id="modal-cliente" class="fixed inset-0 bg-[#050b14]/90 hidden items-center justify-center p-4 backdrop-blur-sm" style="z-index: 999998;">
+        <div class="bg-[#161b22] border border-[#30363d] rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden fade-in">
+            <div class="p-6 border-b border-[#30363d] bg-[#0d1117] flex justify-between items-center"><h3 class="text-xl font-bold text-white" id="modal-cliente-title">Cliente</h3><button onclick="cerrarModal('modal-cliente')" class="text-[#8b949e] hover:text-[#ef4444] text-xl"><i class="fas fa-times"></i></button></div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="cliente-id">
+                <div><label class="text-[10px] font-bold text-[#8b949e] uppercase block mb-1">Nombre / Apellido</label><input type="text" id="m-cli-nombre" class="w-full border border-[#30363d] p-3 rounded-xl bg-[#0d1117] text-white" required></div>
+                <div><label class="text-[10px] font-bold text-[#8b949e] uppercase block mb-1">Teléfono</label><input type="text" id="m-cli-tel" class="w-full border border-[#30363d] p-3 rounded-xl bg-[#0d1117] text-white"></div>
+                <div><label class="text-[10px] font-bold text-[#8b949e] uppercase block mb-1">Dirección</label><input type="text" id="m-cli-dir" class="w-full border border-[#30363d] p-3 rounded-xl bg-[#0d1117] text-white"></div>
+                <div><label class="text-[10px] font-bold text-[#8b949e] uppercase block mb-1">Tipo</label><select id="m-cli-tipo" class="w-full border border-[#30363d] p-3 rounded-xl bg-[#0d1117] text-white"><option value="Minorista">Minorista</option><option value="Mayorista">Mayorista</option></select></div>
+            </div>
+            <div class="p-4 border-t border-[#30363d] bg-[#0d1117]"><button onclick="guardarClienteModal()" class="w-full bg-[#00bfff] text-[#050b14] py-3 rounded-xl font-bold transition">Guardar</button></div>
+        </div>
+    </div>
+
+    <!-- LOGICA JS OPTIMIZADA Y FIREBASE (SHARDING ACTIVADO) -->
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyDsnmGmAaRjIV1QbrNy6Hpn5NZG8yQNY0c",
@@ -1329,7 +1599,6 @@
             
             let vinculadas = 0;
             const skuMap = new Map();
-            // Buscar productos por SKU (exacto) o por Nombre
             db.productos.forEach(p => { 
                 if (p.sku) skuMap.set(String(p.sku).trim().toLowerCase(), p); 
                 if (p.nombre) skuMap.set(p.nombre.trim().toLowerCase(), p);
