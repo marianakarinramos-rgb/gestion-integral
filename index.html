@@ -1083,6 +1083,7 @@
     </div>
 
     <!-- LOGICA JS OPTIMIZADA Y FIREBASE (SHARDING ACTIVADO) -->
+<!-- LOGICA JS ESTABLE Y FIREBASE (VERSIÓN UNIFICADA) -->
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyDsnmGmAaRjIV1QbrNy6Hpn5NZG8yQNY0c",
@@ -1102,8 +1103,8 @@
             }
         } catch(err) { console.warn("Error Firebase local, usando modo offline:", err); }
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const isTiendaWeb = urlParams.get('modo') === 'tienda';
+        // FIX VERCEL/WHATSAPP: Lectura robusta de URL
+        const isTiendaWeb = window.location.href.toLowerCase().includes('modo=tienda');
 
         let mostrarSinFotos = false;
 
@@ -1190,21 +1191,11 @@
 
         let currentUser = null; let accionPendiente = null; let carrito = []; let carritoWeb = [];
 
-        // NUEVO: SISTEMA DE GUARDADO FRAGMENTADO (SHARDING PARA EVITAR LIMITE 1MB)
         function guardarBD() { 
             try {
                 localStorage.setItem('jorge_hogar_erp_v28', JSON.stringify(db));
                 if(esModoNube && firestoreDb) {
-                    let dbCore = { ...db };
-                    delete dbCore.productos; 
-                    
-                    firestoreDb.collection("erp").doc("jorge_hogar_core_v28").set(dbCore).catch(e => console.warn("Error Sync Core:", e));
-                    
-                    if(db.productos && db.productos.length > 0) {
-                        db.productos.forEach(p => {
-                            firestoreDb.collection("jorge_hogar_productos_v28").doc(p.id).set(p).catch(e => console.warn("Error Sync Prod:", e));
-                        });
-                    }
+                    firestoreDb.collection("erp").doc("jorge_hogar_v28").set(db).catch(e => console.warn("Error Sync:", e));
                 }
             } catch (e) { console.warn("Error al guardar:", e); }
         }
@@ -1239,17 +1230,16 @@
                         }
                     }, 3500);
 
-                    // 1. ESCUCHAR EL CORE
-                    firestoreDb.collection("erp").doc("jorge_hogar_core_v28").onSnapshot(doc => {
+                    // ESCUCHA ÚNICA Y ESTABLE (VERSIÓN 16:00HS)
+                    firestoreDb.collection("erp").doc("jorge_hogar_v28").onSnapshot(doc => {
                         clearTimeout(fallbackTimeout);
                         try {
                             if(doc.exists) { 
-                                let cloudData = doc.data(); 
-                                cloudData.productos = db.productos || []; 
-                                db = cloudData; 
+                                db = doc.data(); 
                                 verificarIntegridadDB();
+                                autoRepararPreciosCorruptos();
                             } else { 
-                                guardarBD(); 
+                                firestoreDb.collection("erp").doc("jorge_hogar_v28").set(db).catch(()=>{}); 
                             }
                             localStorage.setItem('jorge_hogar_erp_v28', JSON.stringify(db));
                             
@@ -1257,7 +1247,24 @@
                                 firebaseLoaded = true; 
                                 iniciarAppSegunRouting();
                             } else {
-                                actualizarPermisosYUI();
+                                if(currentUser) {
+                                    const userFresco = db.usuarios.find(u => u.id === currentUser.id);
+                                    if(userFresco && userFresco.rol !== currentUser.rol) { 
+                                        currentUser.rol = userFresco.rol; 
+                                        document.getElementById('lbl-rol-actual').innerText = currentUser.rol; 
+                                        aplicarPermisosRol(); 
+                                    }
+                                    actualizarUI();
+                                } else if(!isTiendaWeb) {
+                                    const select = document.getElementById('login-user');
+                                    if(select) { 
+                                        const val = select.value; 
+                                        select.innerHTML = db.usuarios.map(u => `<option value="${u.id}">${u.nombre}</option>`).join(''); 
+                                        if(val) select.value = val; 
+                                    }
+                                }
+                                cargarDesplegablesVendedores();
+                                if(isTiendaWeb) renderTiendaWeb();
                             }
                         } catch (innerError) {
                             console.warn("Error interno DB:", innerError);
@@ -1269,23 +1276,6 @@
                         if(!firebaseLoaded) { firebaseLoaded = true; iniciarAppSegunRouting(); }
                     });
 
-                    // 2. ESCUCHAR LOS PRODUCTOS (SIN LIMITE DE 1MB)
-                    firestoreDb.collection("jorge_hogar_productos_v28").onSnapshot(snapshot => {
-                        let productosNube = [];
-                        snapshot.forEach(doc => { productosNube.push(doc.data()); });
-                        
-                        db.productos = productosNube;
-                        localStorage.setItem('jorge_hogar_erp_v28', JSON.stringify(db));
-                        
-                        if(firebaseLoaded) {
-                            if (isTiendaWeb) {
-                                renderTiendaWeb(); // Dibuja la tienda apenas llegan los productos
-                            } else {
-                                actualizarUI();
-                            }
-                        }
-                    });
-
                 } else { 
                     iniciarAppSegunRouting();
                 }
@@ -1294,26 +1284,6 @@
                 iniciarAppSegunRouting();
             }
         });
-
-        function actualizarPermisosYUI() {
-            if(currentUser) {
-                const userFresco = db.usuarios.find(u => u.id === currentUser.id);
-                if(userFresco && userFresco.rol !== currentUser.rol) { 
-                    currentUser.rol = userFresco.rol; 
-                    document.getElementById('lbl-rol-actual').innerText = currentUser.rol; 
-                    aplicarPermisosRol(); 
-                }
-                actualizarUI();
-            } else if(!isTiendaWeb) {
-                const select = document.getElementById('login-user');
-                if(select) { 
-                    const val = select.value; 
-                    select.innerHTML = db.usuarios.map(u => `<option value="${u.id}">${u.nombre}</option>`).join(''); 
-                    if(val) select.value = val; 
-                }
-            }
-            cargarDesplegablesVendedores();
-        }
 
         function iniciarAppSegunRouting() {
             const overlay = document.getElementById('carga-overlay-global');
@@ -1599,6 +1569,7 @@
             
             let vinculadas = 0;
             const skuMap = new Map();
+            // Buscar productos por SKU (exacto) o por Nombre
             db.productos.forEach(p => { 
                 if (p.sku) skuMap.set(String(p.sku).trim().toLowerCase(), p); 
                 if (p.nombre) skuMap.set(p.nombre.trim().toLowerCase(), p);
@@ -1793,9 +1764,6 @@
                 if(modulo === 'presupuestos') { db.presupuestos = []; db.config.nextPresupuesto = 1; }
                 if(modulo === 'clientes') db.clientes = []; 
                 if(modulo === 'stock') {
-                    if(esModoNube && firestoreDb) {
-                        db.productos.forEach(p => firestoreDb.collection("jorge_hogar_productos_v28").doc(p.id).delete().catch(()=>{}));
-                    }
                     db.productos = [];
                 }
                 guardarBD(); actualizarUI(); mostrarToast(`Datos eliminados`, 'bg-[#ef4444]');
@@ -2270,7 +2238,6 @@
         function borrarStock(id) { 
             pedirConfirmacion('¿Borrar este producto?', () => { 
                 db.productos = db.productos.filter(x => x.id !== id); 
-                if(esModoNube && firestoreDb) firestoreDb.collection("jorge_hogar_productos_v28").doc(id).delete().catch(()=>{});
                 guardarBD(); 
                 actualizarUI(); 
                 mostrarToast('Producto eliminado', 'bg-[#ef4444]'); 
@@ -2411,3 +2378,4 @@
     </script>
 </body>
 </html>
+  
