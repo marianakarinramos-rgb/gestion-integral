@@ -1085,6 +1085,12 @@
     <!-- LOGICA JS OPTIMIZADA Y FIREBASE (SHARDING ACTIVADO) -->
 <!-- LOGICA JS ESTABLE Y FIREBASE (VERSIÓN UNIFICADA) -->
     <script>
+        // ESCUDO ANTE ERRORES CRITICOS (Si falla algo, te lo mostrará en pantalla en rojo en vez de quedar negra)
+        window.addEventListener('error', function(e) {
+            if(e.message.includes('Script error')) return;
+            document.body.innerHTML += '<div style="position:fixed;top:0;left:0;right:0;background:red;color:white;padding:20px;z-index:999999;font-weight:bold;">Error en el sistema: ' + e.message + '</div>';
+        });
+
         const firebaseConfig = {
             apiKey: "AIzaSyDsnmGmAaRjIV1QbrNy6Hpn5NZG8yQNY0c",
             authDomain: "jorge-hogar-erp.firebaseapp.com",
@@ -1103,7 +1109,7 @@
             }
         } catch(err) { console.warn("Error Firebase local, usando modo offline:", err); }
 
-        // FIX VERCEL/WHATSAPP: Lectura robusta de URL
+        // FIX VERCEL: Permite que Whatsapp abra el catálogo sin deformar la URL
         const isTiendaWeb = window.location.href.toLowerCase().includes('modo=tienda');
 
         let mostrarSinFotos = false;
@@ -1178,16 +1184,22 @@
             }
         } catch (e) { console.warn("Error leyendo DB local:", e); }
         
-        verificarIntegridadDB();
-
+        // BLINDAJE DE MEMORIA PARA EVITAR PANTALLA NEGRA
         function verificarIntegridadDB() {
-            if(!db.config || !db.config.nombreEmpresa) db.config = { nombreEmpresa: 'Gesto Smart', logoBase64: '', nextPresupuesto: 1, nextRemito: 1, whatsappTurnos: '' };
+            if(!db.config || typeof db.config !== 'object') db.config = { nombreEmpresa: 'Gesto Smart', logoBase64: '', nextPresupuesto: 1, nextRemito: 1, whatsappTurnos: '' };
             if(!db.config.nextPresupuesto) db.config.nextPresupuesto = 1;
             if(!db.config.nextRemito) db.config.nextRemito = 1;
-            if(!db.usuarios || db.usuarios.length === 0) db.usuarios = [ { id: 'u1', nombre: 'Admin', pin: '1234', rol: 'admin' } ];
-            ['empleados', 'productos', 'listasPrecio', 'clientes', 'caja', 'gastosFijos', 'presupuestos', 'entregas'].forEach(key => { if (!Array.isArray(db[key])) db[key] = []; });
+            
+            const arrays = ['usuarios', 'empleados', 'productos', 'listasPrecio', 'clientes', 'caja', 'gastosFijos', 'presupuestos', 'entregas'];
+            arrays.forEach(key => { 
+                if (!Array.isArray(db[key])) db[key] = []; 
+            });
+
+            if(db.usuarios.length === 0) db.usuarios = [ { id: 'u1', nombre: 'Admin', pin: '1234', rol: 'admin' } ];
             if(db.listasPrecio.length === 0) db.listasPrecio.push({ id: '1', nombre: 'Precio Público (Web)', margen: 25, costoVariable: 0 });
         }
+        
+        verificarIntegridadDB();
 
         let currentUser = null; let accionPendiente = null; let carrito = []; let carritoWeb = [];
 
@@ -1205,10 +1217,10 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             try {
-                document.getElementById('fecha-caja').value = hoyString(); 
-                document.getElementById('fecha-deposito').value = hoyString(); 
-                document.getElementById('filtro-mes-rrhh').value = hoyString().substring(0, 7); 
-                document.getElementById('filtro-mes-rentabilidad').value = hoyString().substring(0, 7);
+                const elFechaCaja = document.getElementById('fecha-caja'); if(elFechaCaja) elFechaCaja.value = hoyString(); 
+                const elFechaDep = document.getElementById('fecha-deposito'); if(elFechaDep) elFechaDep.value = hoyString(); 
+                const elFiltroRrhh = document.getElementById('filtro-mes-rrhh'); if(elFiltroRrhh) elFiltroRrhh.value = hoyString().substring(0, 7); 
+                const elFiltroRent = document.getElementById('filtro-mes-rentabilidad'); if(elFiltroRent) elFiltroRent.value = hoyString().substring(0, 7);
                 
                 const fComDesde = document.getElementById('sueldo-desde'); 
                 const fComHasta = document.getElementById('sueldo-hasta');
@@ -1217,6 +1229,7 @@
                     fComDesde.value = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0]; 
                     fComHasta.value = hoyString(); 
                 }
+                
                 aplicarConfiguracion();
                 autoRepararPreciosCorruptos();
 
@@ -1225,12 +1238,10 @@
                     fallbackTimeout = setTimeout(() => {
                         if(!firebaseLoaded) {
                             firebaseLoaded = true;
-                            console.warn("Firebase demorado. Forzando inicio local.");
                             iniciarAppSegunRouting();
                         }
                     }, 3500);
 
-                    // ESCUCHA ÚNICA Y ESTABLE (VERSIÓN 16:00HS)
                     firestoreDb.collection("erp").doc("jorge_hogar_v28").onSnapshot(doc => {
                         clearTimeout(fallbackTimeout);
                         try {
@@ -1251,7 +1262,8 @@
                                     const userFresco = db.usuarios.find(u => u.id === currentUser.id);
                                     if(userFresco && userFresco.rol !== currentUser.rol) { 
                                         currentUser.rol = userFresco.rol; 
-                                        document.getElementById('lbl-rol-actual').innerText = currentUser.rol; 
+                                        const rolActualEl = document.getElementById('lbl-rol-actual');
+                                        if(rolActualEl) rolActualEl.innerText = currentUser.rol; 
                                         aplicarPermisosRol(); 
                                     }
                                     actualizarUI();
@@ -1267,12 +1279,12 @@
                                 if(isTiendaWeb) renderTiendaWeb();
                             }
                         } catch (innerError) {
-                            console.warn("Error interno DB:", innerError);
+                            console.error("Error interno DB:", innerError);
                             if(!firebaseLoaded) { firebaseLoaded = true; iniciarAppSegunRouting(); }
                         }
                     }, error => {
                         clearTimeout(fallbackTimeout);
-                        console.warn("Error de conexión Firebase:", error);
+                        console.error("Error de conexión Firebase:", error);
                         if(!firebaseLoaded) { firebaseLoaded = true; iniciarAppSegunRouting(); }
                     });
 
@@ -1290,33 +1302,36 @@
             if(overlay) { overlay.style.display = 'none'; overlay.classList.add('hidden'); }
 
             if (isTiendaWeb) {
-                document.getElementById('erp-container').classList.add('hidden');
-                document.getElementById('erp-container').classList.remove('flex');
-                document.getElementById('public-catalog').classList.remove('hidden');
-                document.getElementById('public-catalog').classList.add('flex');
+                const erpCont = document.getElementById('erp-container');
+                if(erpCont) { erpCont.classList.add('hidden'); erpCont.classList.remove('flex'); }
+                const pubCat = document.getElementById('public-catalog');
+                if(pubCat) { pubCat.classList.remove('hidden'); pubCat.classList.add('flex'); }
                 document.body.classList.add('modo-tienda-activa');
                 
-                document.getElementById('store-name').innerText = db.config.nombreEmpresa || 'Mi Tienda';
+                const storeNameEl = document.getElementById('store-name');
+                if(storeNameEl) storeNameEl.innerText = db.config.nombreEmpresa || 'Mi Tienda';
                 if(db.config.logoBase64) {
                     const logo = document.getElementById('store-logo');
                     if(logo) logo.src = db.config.logoBase64;
                 }
                 renderTiendaWeb();
             } else {
-                document.getElementById('public-catalog').classList.add('hidden');
-                document.getElementById('public-catalog').classList.remove('flex');
+                const pubCat = document.getElementById('public-catalog');
+                if(pubCat) { pubCat.classList.add('hidden'); pubCat.classList.remove('flex'); }
                 prepararLogin();
             }
         }
 
         function prepararLogin() { 
-            document.getElementById('erp-container').classList.add('hidden');
-            document.getElementById('erp-container').classList.remove('flex');
+            const erpCont = document.getElementById('erp-container');
+            if(erpCont) { erpCont.classList.add('hidden'); erpCont.classList.remove('flex'); }
+            
             const select = document.getElementById('login-user'); 
-            if(select) select.innerHTML = db.usuarios.map(u => `<option value="${u.id}">${u.nombre}</option>`).join(''); 
+            if(select && db.usuarios) select.innerHTML = db.usuarios.map(u => `<option value="${u.id}">${u.nombre}</option>`).join(''); 
+            
             const pantLogin = document.getElementById('pantalla-login');
-            pantLogin.classList.remove('hidden');
-            pantLogin.classList.add('flex');
+            if(pantLogin) { pantLogin.classList.remove('hidden'); pantLogin.classList.add('flex'); }
+            
             setTimeout(() => {
                 const pinInput = document.getElementById('login-pin');
                 if(pinInput) { pinInput.value = ''; pinInput.focus(); }
@@ -1324,9 +1339,14 @@
         }
 
         function procesarLogin() {
-            const id = document.getElementById('login-user').value; 
-            const pin = document.getElementById('login-pin').value; 
+            const elUser = document.getElementById('login-user');
+            const elPin = document.getElementById('login-pin');
+            if(!elUser || !elPin) return;
+            
+            const id = elUser.value; 
+            const pin = elPin.value; 
             const u = db.usuarios.find(x => x.id === id);
+            
             if(u && u.pin === pin) { 
                 currentUser = u; 
                 document.getElementById('pantalla-login').classList.add('hidden');
@@ -1340,18 +1360,19 @@
                 mostrarToast(`Bienvenido/a, ${u.nombre}`, 'bg-[#10b981]'); 
             } else { 
                 mostrarToast('PIN Incorrecto', 'bg-[#ef4444]'); 
-                document.getElementById('login-pin').value = ''; 
+                elPin.value = ''; 
             }
         }
         
         function procesarLogout() { 
             currentUser = null; 
-            document.getElementById('erp-container').classList.add('hidden');
-            document.getElementById('erp-container').classList.remove('flex');
+            const erpCont = document.getElementById('erp-container');
+            if(erpCont) { erpCont.classList.add('hidden'); erpCont.classList.remove('flex'); }
             prepararLogin(); 
         }
 
         function aplicarPermisosRol() {
+            if(!currentUser) return;
             const rol = currentUser.rol; 
             
             if(rol !== 'admin') document.body.classList.add('app-locked');
@@ -1389,6 +1410,7 @@
                     const importedDB = JSON.parse(e.target.result); if(!importedDB.usuarios || !importedDB.config) throw new Error("Archivo inválido");
                     pedirConfirmacion('⚠️ Estás por REEMPLAZAR toda la base de datos actual con este archivo. ¿Continuar?', () => { 
                         db = importedDB; 
+                        verificarIntegridadDB();
                         autoRepararPreciosCorruptos();
                         guardarBD(); 
                         actualizarUI(); 
@@ -1569,7 +1591,6 @@
             
             let vinculadas = 0;
             const skuMap = new Map();
-            // Buscar productos por SKU (exacto) o por Nombre
             db.productos.forEach(p => { 
                 if (p.sku) skuMap.set(String(p.sku).trim().toLowerCase(), p); 
                 if (p.nombre) skuMap.set(p.nombre.trim().toLowerCase(), p);
@@ -1692,11 +1713,11 @@
 
         function aplicarConfiguracion() {
             const nombre = db.config.nombreEmpresa || 'Gesto Smart'; 
-            document.getElementById('nombreComercioSide').value = nombre; 
-            if(document.getElementById('conf-empresa-nombre')) document.getElementById('conf-empresa-nombre').value = nombre;
-            if(document.getElementById('conf-empresa-ws')) document.getElementById('conf-empresa-ws').value = db.config.whatsappTurnos || '';
+            const elNomCom = document.getElementById('nombreComercioSide'); if(elNomCom) elNomCom.value = nombre; 
+            const elConfNom = document.getElementById('conf-empresa-nombre'); if(elConfNom) elConfNom.value = nombre;
+            const elConfWs = document.getElementById('conf-empresa-ws'); if(elConfWs) elConfWs.value = db.config.whatsappTurnos || '';
             const clientPreview = document.getElementById('clientLogoPreview'); 
-            if(db.config.logoBase64) { clientPreview.src = db.config.logoBase64; document.getElementById('upload-logo-overlay').style.opacity = '0'; }
+            if(db.config.logoBase64 && clientPreview) { clientPreview.src = db.config.logoBase64; const upOvl = document.getElementById('upload-logo-overlay'); if(upOvl) upOvl.style.opacity = '0'; }
         }
         
         function guardarInfoEmpresa() { 
@@ -1720,12 +1741,16 @@
                 link.classList.remove('active', 'text-[#050b14]', 'bg-[#00bfff]', 'shadow-[0_0_10px_rgba(0,191,255,0.3)]', 'font-bold', 'text-white'); 
                 link.classList.add('text-[#8b949e]', 'hover:bg-[#161b22]', 'hover:text-white', 'font-medium'); 
             });
-            document.getElementById(tabId).classList.remove('hidden');
+            const tg = document.getElementById(tabId);
+            if(tg) tg.classList.remove('hidden');
             if(el) { 
                 el.classList.remove('text-[#8b949e]', 'hover:bg-[#161b22]', 'hover:text-white', 'font-medium'); 
                 el.classList.add('active', 'text-[#050b14]', 'bg-[#00bfff]', 'shadow-[0_0_10px_rgba(0,191,255,0.3)]', 'font-bold'); 
             }
-            if(window.innerWidth < 768) document.getElementById('mobile-menu').parentElement.classList.add('hidden'); 
+            if(window.innerWidth < 768) {
+                const mobMenu = document.getElementById('mobile-menu');
+                if(mobMenu && mobMenu.parentElement) mobMenu.parentElement.classList.add('hidden'); 
+            }
             actualizarUI();
         }
 
@@ -1747,8 +1772,8 @@
             }
         }
 
-        function cerrarModal(id) { document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); }
-        function abrirModalUI(id) { document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); }
+        function cerrarModal(id) { const el = document.getElementById(id); if(el){ el.classList.add('hidden'); el.classList.remove('flex'); } }
+        function abrirModalUI(id) { const el = document.getElementById(id); if(el){ el.classList.remove('hidden'); el.classList.add('flex'); } }
         
         function mostrarToast(msg, color = 'bg-[#00bfff]') { 
             const cont = document.getElementById('toast-container'); const div = document.createElement('div'); div.className = `toast ${color} text-[#050b14]`; div.innerHTML = msg; cont.appendChild(div); 
@@ -1763,9 +1788,7 @@
                 if(modulo === 'gastos') db.gastosFijos = []; 
                 if(modulo === 'presupuestos') { db.presupuestos = []; db.config.nextPresupuesto = 1; }
                 if(modulo === 'clientes') db.clientes = []; 
-                if(modulo === 'stock') {
-                    db.productos = [];
-                }
+                if(modulo === 'stock') { db.productos = []; }
                 guardarBD(); actualizarUI(); mostrarToast(`Datos eliminados`, 'bg-[#ef4444]');
             });
         }
@@ -1912,7 +1935,7 @@
             const p = db.presupuestos.find(x => x.id === id); if(!p) return; 
             document.getElementById('cobro-presupuesto-id').value = p.id; 
             document.getElementById('cobro-monto-total').innerText = '$' + p.totalVenta.toLocaleString('es-AR'); 
-            document.getElementById('btn-conf-cobro').disabled = false; 
+            const btnConf = document.getElementById('btn-conf-cobro'); if(btnConf) btnConf.disabled = false; 
             abrirModalUI('modal-cobro'); 
         }
 
@@ -1925,7 +1948,6 @@
                 if(!p) { cerrarModal('modal-cobro'); return mostrarToast('Error: Presupuesto no encontrado.', 'bg-[#ef4444]'); }
                 const items = p.items || [];
                 
-                // Nuevo: Si el pedido vino de la WEB (stockDescontado = true), NO vuelve a descontar el stock
                 if(items.length > 0 && !p.stockDescontado) { 
                     for(let item of items) { 
                         const productoDB = db.productos.find(prod => prod.id === item.pId); 
@@ -1960,7 +1982,6 @@
                 guardarBD(); cerrarModal('modal-cobro'); actualizarUI();
                 
                 const cDB = db.clientes.find(x => x.nombre === p.cliente);
-                // Intenta buscar el telefono en la base de clientes, si es pedido web, lo saca del texto del cliente
                 let telCli = cDB ? cDB.tel : '-';
                 if(p.cliente && p.cliente.includes('Tel:')) {
                     const match = p.cliente.match(/Tel:\s*([\d\s]+)/);
@@ -2144,6 +2165,1692 @@
 
             doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.text("MERCADERÍA ENTREGADA Y CONTROLADA", 105, y, null, null, "center"); y += 20; doc.setFontSize(10); doc.setFont("helvetica", "normal"); doc.text("Firma de Conformidad: ___________________________", 20, y);
             doc.save(`Remito_REM-${numero}.pdf`);
+        }
+
+        function renderTiendaWeb() {
+            const elSearch = document.getElementById('buscador-tienda');
+            const search = elSearch ? elSearch.value.toLowerCase() : '';
+            
+            let filtrados = db.productos.filter(p => p.cantidad > 0);
+            if(search) {
+                filtrados = filtrados.filter(p => p.nombre.toLowerCase().includes(search) || (p.sku && p.sku.toLowerCase().includes(search)));
+            }
+            
+            const grid = document.getElementById('grid-productos-tienda');
+            if(!grid) return;
+            
+            const listaPublica = db.listasPrecio[0]; 
+            
+            grid.innerHTML = filtrados.length ? filtrados.map(p => {
+                const precio = Math.round(listaPublica ? (p.costo * (1 + (listaPublica.margen / 100))) : p.costo);
+                const imgSrc = p.imagenBase64 || 'https://via.placeholder.com/300/1e293b/8b949e?text=Sin+Imagen';
+                return `
+                <div class="product-card">
+                    <img src="${imgSrc}" class="product-image" loading="lazy">
+                    <div class="p-4 flex flex-col flex-grow">
+                        <span class="text-[10px] text-[#00bfff] font-bold uppercase mb-1">SKU: ${p.sku || 'N/A'}</span>
+                        <h4 class="text-sm font-bold text-white mb-2 line-clamp-2">${p.nombre}</h4>
+                        <span class="text-[10px] text-[#8b949e] mb-2 font-bold">Disponibles: <strong class="text-white">${p.cantidad}</strong></span>
+                        <div class="mt-auto flex justify-between items-end">
+                            <span class="text-lg font-black text-[#10b981]">$${precio.toLocaleString('es-AR')}</span>
+                            <button onclick="agregarAlCarritoWeb('${p.id}', ${precio})" class="bg-[#00bfff] hover:bg-[#4dd2ff] text-[#050b14] w-10 h-10 rounded-full shadow-[0_0_10px_rgba(0,191,255,0.4)] transition flex items-center justify-center"><i class="fas fa-cart-plus"></i></button>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('') : '<div class="col-span-full py-16 text-center text-[#8b949e] font-bold"><i class="fas fa-box-open text-4xl mb-3 block"></i> No hay artículos con stock disponibles en este momento.</div>';
+        }
+
+        function agregarAlCarritoWeb(id, precio) {
+            const prod = db.productos.find(x => x.id === id); if(!prod) return;
+            const exist = carritoWeb.find(x => x.id === id);
+            if(exist) { 
+                if(exist.cant < prod.cantidad) exist.cant++; 
+                else mostrarToast('Stock máximo alcanzado', 'bg-[#f59e0b]'); 
+            } else { 
+                carritoWeb.push({ id: prod.id, sku: prod.sku, nombre: prod.nombre, cant: 1, precio: precio, costoUnitario: prod.costo }); 
+            }
+            actualizarBadgeCarrito(); mostrarToast('Agregado al carrito', 'bg-[#10b981]');
+        }
+        
+        function actualizarBadgeCarrito() { 
+            const badge = document.getElementById('cart-badge'); const tot = carritoWeb.reduce((sum, i) => sum + i.cant, 0);
+            if(tot > 0) { badge.innerText = tot; badge.classList.remove('hidden'); } else { badge.classList.add('hidden'); }
+        }
+        
+        function abrirCarritoWeb() {
+            const list = document.getElementById('lista-carrito-web'); let html = ''; let total = 0;
+            if(carritoWeb.length === 0) { html = '<p class="text-center text-[#8b949e] font-bold py-10">Tu carrito está vacío.</p>'; } 
+            else {
+                html = carritoWeb.map((item, index) => {
+                    const sub = item.cant * item.precio; total += sub;
+                    return `<div class="flex justify-between items-center bg-[#0d1117] p-3 rounded-xl border border-[#30363d]"><div class="flex-grow"><h4 class="text-sm font-bold text-white line-clamp-1">${item.nombre}</h4><span class="text-xs text-[#8b949e] block mt-1">${item.cant}x $${item.precio.toLocaleString('es-AR')} = <strong class="text-[#00bfff]">$${sub.toLocaleString('es-AR')}</strong></span></div><div class="flex items-center gap-2"><button onclick="modificarCantWeb(${index}, -1)" class="bg-[#1e293b] text-white w-8 h-8 rounded-lg font-bold hover:bg-[#30363d]">-</button><span class="font-bold text-white px-1 text-sm">${item.cant}</span><button onclick="modificarCantWeb(${index}, 1)" class="bg-[#1e293b] text-white w-8 h-8 rounded-lg font-bold hover:bg-[#30363d]">+</button></div></div>`;
+                }).join('');
+            }
+            document.getElementById('total-carrito-web').innerText = '$' + total.toLocaleString('es-AR');
+            list.innerHTML = html; abrirModalUI('modal-carrito-web');
+        }
+        
+        function modificarCantWeb(index, delta) {
+            const item = carritoWeb[index]; const prod = db.productos.find(x => x.id === item.id);
+            item.cant += delta;
+            if(item.cant > prod.cantidad) { item.cant = prod.cantidad; mostrarToast('Stock máximo alcanzado', 'bg-[#f59e0b]'); }
+            if(item.cant <= 0) { carritoWeb.splice(index, 1); }
+            actualizarBadgeCarrito(); abrirCarritoWeb();
+        }
+
+        function finalizarCompraWebYDescontarStock() {
+            if(carritoWeb.length === 0) return mostrarToast('El carrito está vacío', 'bg-[#ef4444]');
+            const nombreCli = document.getElementById('web-cli-nombre').value.trim() || 'Cliente Web';
+            const telCli = document.getElementById('web-cli-tel').value.trim() || '-';
+            const dirCli = document.getElementById('web-cli-dir').value.trim() || 'Retiro en Local';
+
+            if (nombreCli !== 'Cliente Web') {
+                let clienteExistente = db.clientes.find(c => c.nombre.toLowerCase() === nombreCli.toLowerCase() || (c.tel !== '-' && c.tel === telCli));
+                if (!clienteExistente) {
+                    db.clientes.push({ id: generarId(), nombre: nombreCli, tel: telCli, direccion: dirCli, tipo: 'Minorista' });
+                } else {
+                    if(clienteExistente.tel === '-' && telCli !== '-') clienteExistente.tel = telCli;
+                    if((clienteExistente.direccion === '-' || !clienteExistente.direccion) && dirCli !== 'Retiro en Local') clienteExistente.direccion = dirCli;
+                }
+            }
+
+            for(let item of carritoWeb) {
+                const prod = db.productos.find(p => p.id === item.id);
+                if(!prod || prod.cantidad < item.cant) {
+                    return mostrarToast(`No hay suficiente stock de "${item.nombre}".`, 'bg-[#ef4444]');
+                }
+            }
+
+            let totalVenta = 0; let totalCosto = 0; let detalles = [];
+            carritoWeb.forEach(item => {
+                const prod = db.productos.find(p => p.id === item.id);
+                if(prod) { prod.cantidad -= item.cant; }
+                const sub = item.cant * item.precio;
+                totalVenta += sub;
+                totalCosto += (item.costoUnitario * item.cant);
+                detalles.push({ cant: item.cant, nombre: item.nombre, subtotal: sub, sku: item.sku || '' });
+            });
+
+            db.productos = db.productos.filter(p => p.cantidad > 0);
+
+            if(!db.config.nextPresupuesto) db.config.nextPresupuesto = 1;
+            const numPresStr = String(db.config.nextPresupuesto++).padStart(4, '0');
+            const fechaStr = hoyString(); 
+            const now = new Date(); 
+            const horaStr = `${now.getHours().toString().padStart(2,'0')}:${new Date().getMinutes().toString().padStart(2,'0')}`;
+            
+            db.presupuestos.push({
+                id: generarId(), numero: numPresStr, fecha: fechaStr, hora: horaStr, cliente: `${nombreCli} (Web - Tel: ${telCli})`, vendedor: 'Tienda Web',
+                tipoEntrega: dirCli.toLowerCase().includes('retiro') ? 'Retiro en Local' : 'Envío a Domicilio', direccion: dirCli,
+                totalVenta: totalVenta, totalCosto: totalCosto, totalCostoVar: 0, stockDescontado: true,
+                items: JSON.parse(JSON.stringify(carritoWeb.map(c => ({ id: generarId(), pId: c.id, nombre: c.nombre, listaNombre: 'Web', cant: c.cant, precioUnitario: c.precio, costoUnitario: c.costoUnitario, costoVarPerc: 0 })))),
+                detallesTexto: detalles.map(d => `${d.cant}x ${d.nombre}`).join(' | ')
+            });
+
+            let text = `Hola *${db.config.nombreEmpresa}*! 👋%0AConfirmé mi pedido web *PRES-${numPresStr}*:%0A%0A`;
+            detalles.forEach(item => { text += `▪ *${item.cant}x* ${item.nombre} - $${item.subtotal.toLocaleString('es-AR')}%0A`; });
+            text += `%0A*TOTAL: $${totalVenta.toLocaleString('es-AR')}*%0A`;
+            text += `*Cliente:* ${nombreCli}%0A*Tel:* ${telCli}%0A*Entrega:* ${dirCli}%0A%0A¡Muchas gracias!`;
+
+            guardarBD(); carritoWeb = []; actualizarBadgeCarrito(); cerrarModal('modal-carrito-web'); renderTiendaWeb(); actualizarUI();
+            mostrarToast(`¡Pedido confirmado! Stock descontado con éxito`, 'bg-[#10b981]');
+
+            const phone = db.config.whatsappTurnos || '';
+            if(phone) { setTimeout(() => { window.open(`https://wa.me/${phone}?text=${text}`, '_blank'); }, 500); }
+        }
+
+        async function generarPDFCatalogo() {
+            if(db.productos.length === 0) return mostrarToast('No hay productos para exportar.', 'bg-[#f59e0b]');
+            const btn = document.querySelector('button[onclick="generarPDFCatalogo()"]');
+            if(btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Generando...'; }
+            
+            const { jsPDF } = window.jspdf; 
+            const doc = new jsPDF(); 
+            const listaPublica = db.listasPrecio[0]; 
+            const filtrados = db.productos.filter(p => p.cantidad > 0);
+            
+            doc.setFillColor(245, 245, 245); doc.rect(0, 0, 210, 297, 'F');
+            doc.setFont("helvetica", "bold"); doc.setFontSize(22); doc.setTextColor(0, 191, 255);
+            doc.text(db.config.nombreEmpresa + " - Catálogo", 105, 18, null, null, "center");
+            doc.setFontSize(10); doc.setTextColor(100, 100, 100); doc.text(`Stock actualizado al: ${hoyString()}`, 105, 24, null, null, "center");
+            
+            let x = 15; let y = 35; const cardWidth = 55; const cardHeight = 75;
+
+            const cargarImagen = (src) => {
+                return new Promise((resolve, reject) => {
+                    const img = new Image(); img.onload = () => resolve(img); img.onerror = () => reject(new Error('Img error')); img.src = src;
+                });
+            };
+
+            for (let i = 0; i < filtrados.length; i++) {
+                const p = filtrados[i];
+                if (x > 150) { x = 15; y += (cardHeight + 10); }
+                if (y + cardHeight > 280) { doc.addPage(); doc.setFillColor(245, 245, 245); doc.rect(0, 0, 210, 297, 'F'); y = 20; x = 15; }
+                
+                doc.setFillColor(255, 255, 255); doc.setDrawColor(220, 220, 220); doc.roundedRect(x, y, cardWidth, cardHeight, 3, 3, 'FD');
+
+                if(p.imagenBase64) { 
+                    try { 
+                        const imgElem = await cargarImagen(p.imagenBase64); const imgRatio = imgElem.width / imgElem.height;
+                        const boxSize = 45; let drawW = boxSize; let drawH = boxSize;
+                        if (imgRatio > 1) { drawH = boxSize / imgRatio; } else { drawW = boxSize * imgRatio; }
+                        const offsetX = x + 5 + ((boxSize - drawW) / 2); const offsetY = y + 5 + ((boxSize - drawH) / 2);
+                        doc.addImage(p.imagenBase64, 'JPEG', offsetX, offsetY, drawW, drawH); 
+                    } catch(e) { doc.setDrawColor(200); doc.rect(x + 5, y + 5, 45, 45); doc.text("Sin Foto", x + 15, y + 30); } 
+                } else { 
+                    doc.setFillColor(240, 240, 240); doc.rect(x + 5, y + 5, 45, 45, 'F'); doc.setTextColor(150, 150, 150); doc.setFontSize(8); doc.text("Sin Imagen", x + 20, y + 28); 
+                }
+                
+                doc.setFontSize(7); doc.setTextColor(100, 100, 100); doc.setFont("helvetica", "bold"); doc.text(`SKU: ${p.sku||'-'}`, x + 5, y + 55);
+                doc.setFontSize(8); doc.setTextColor(30, 30, 30); doc.setFont("helvetica", "normal");
+                const splitName = doc.splitTextToSize(p.nombre, cardWidth - 10); doc.text(splitName, x + 5, y + 60);
+                
+                const precio = Math.round(listaPublica ? (p.costo * (1 + (listaPublica.margen / 100))) : p.costo);
+                doc.setFontSize(11); doc.setTextColor(16, 185, 129); doc.setFont("helvetica", "bold"); doc.text(`$${precio.toLocaleString('es-AR')}`, x + 5, y + 71);
+                x += (cardWidth + 8);
+            }
+            
+            doc.save(`Catalogo_${db.config.nombreEmpresa.replace(/\s+/g, '_')}.pdf`);
+            if(btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-pdf mr-2"></i> Descargar PDF'; }
+        }
+
+        function toggleFiltroSinFotos() {
+            mostrarSinFotos = !mostrarSinFotos;
+            const btn = document.getElementById('btn-filtro-fotos');
+            if(mostrarSinFotos) {
+                btn.classList.remove('text-[#8b949e]');
+                btn.classList.add('text-[#00bfff]');
+            } else {
+                btn.classList.add('text-[#8b949e]');
+                btn.classList.remove('text-[#00bfff]');
+            }
+            renderStock();
+        }
+
+        function renderStock() {
+            const thead = document.getElementById('thead-stock'); const tbody = document.getElementById('lista-stock-tabla'); if(!thead || !tbody) return;
+            const search = document.getElementById('buscador-stock') ? document.getElementById('buscador-stock').value.toLowerCase() : '';
+            
+            let filtrados = db.productos.filter(p => p.nombre.toLowerCase().includes(search) || (p.sku && p.sku.toLowerCase().includes(search)));
+            if(mostrarSinFotos) {
+                filtrados = filtrados.filter(p => !p.imagenBase64 || p.imagenBase64.trim() === '');
+            }
+
+            const listasOrdenadas = [...db.listasPrecio].sort((a, b) => a.margen - b.margen); const isAdmin = currentUser && currentUser.rol === 'admin';
+            
+            let thHTML = '<th class="py-4 px-4 w-16">Foto</th><th class="py-4 px-4 w-24">SKU</th><th class="py-4 px-4 min-w-[250px]">Producto</th><th class="py-4 px-4 text-center w-32">Unid.</th>';
+            listasOrdenadas.forEach(l => { thHTML += `<th class="py-4 px-4 text-center text-[#00bfff] uppercase">${l.nombre}</th>`; }); if(isAdmin) thHTML += '<th class="py-4 px-4 text-center w-24">Acción</th>'; thead.innerHTML = thHTML;
+            
+            tbody.innerHTML = filtrados.length ? filtrados.map(p => {
+                const imgContent = p.imagenBase64 ? `<img src="${p.imagenBase64}" class="w-10 h-10 object-cover rounded bg-[#0d1117] border border-[#30363d] ${isAdmin ? 'group-hover:opacity-50' : ''} transition">` : `<div class="w-10 h-10 rounded bg-[#1e293b] flex items-center justify-center text-[#8b949e] text-xs ${isAdmin ? 'group-hover:bg-[#30363d] group-hover:text-white' : ''} transition border border-[#30363d]"><i class="fas ${isAdmin ? 'fa-plus' : 'fa-image'}"></i></div>`;
+                const imgTag = isAdmin ? `<label class="block cursor-pointer group m-0 relative" title="Cambiar foto"><input type="file" accept="image/*" class="hidden" onchange="procesarImagenIndividual(event, '${p.id}')">${imgContent}</label>` : imgContent;
+                
+                let tdHTML = `<td class="py-3 px-4">${imgTag}</td><td class="py-3 px-4 font-bold text-[#8b949e] text-xs">${p.sku || '-'}</td><td class="py-3 px-4 font-bold text-white">${p.nombre}</td><td class="py-3 px-4 text-center font-bold text-xl ${p.cantidad <= 0 ? 'text-[#ef4444]' : 'text-white'}">${p.cantidad}</td>`;
+                listasOrdenadas.forEach(l => { const precio = Math.round(p.costo * (1 + (l.margen / 100))); tdHTML += `<td class="py-3 px-4 text-center font-bold text-[#c9d1d9]">$${precio.toLocaleString('es-AR')}</td>`; });
+                if(isAdmin) { tdHTML += `<td class="py-3 px-4 text-center"><button onclick="editarStock('${p.id}')" class="text-[#00bfff] hover:text-[#4dd2ff] mx-1"><i class="fas fa-edit"></i></button><button onclick="borrarStock('${p.id}')" class="text-[#ef4444] hover:text-red-400 mx-1"><i class="fas fa-trash"></i></button></td>`; }
+                return `<tr class="${p.cantidad <= 0 ? 'bg-[#ef4444]/5' : 'hover:bg-[#1e293b]/50'} transition border-b border-[#30363d]">${tdHTML}</tr>`;
+            }).join('') : `<tr><td colspan="${4 + listasOrdenadas.length + (isAdmin?1:0)}" class="py-10 text-center text-[#8b949e] font-bold">No hay productos.</td></tr>`;
+        }
+
+        function renderPrecios() {
+            if(!currentUser) return;
+            const thead = document.getElementById('thead-precios'); const tbody = document.getElementById('tbody-precios'); if(!thead || !tbody) return;
+            const filtrados = db.productos; const listasOrdenadas = [...db.listasPrecio].sort((a, b) => a.margen - b.margen);
+            const isAdmin = currentUser.rol === 'admin';
+
+            let thHTML = '<th class="py-4 px-4 w-24">SKU</th><th class="py-4 px-4 min-w-[200px]">Producto</th>';
+            if(isAdmin) thHTML += '<th class="py-4 px-4 text-center">Costo Base</th>';
+
+            listasOrdenadas.forEach(l => { 
+                thHTML += `<th class="py-4 px-4 text-center bg-[#0d1117] border-l border-[#30363d]"><span class="font-bold text-white uppercase">${l.nombre}</span> <br>`;
+                if (isAdmin) {
+                    thHTML += `<span class="text-[10px] text-[#00bfff] font-bold cursor-pointer hover:underline bg-[#00bfff]/10 px-2 py-0.5 rounded block mt-1 border border-[#00bfff]/30" onclick="editarLista('${l.id}')">✏️ Remarque: ${l.margen}% | C.Var: ${l.costoVariable || 0}%</span><button onclick="borrarLista('${l.id}')" class="text-[#ef4444] hover:text-red-400 mt-2 text-xs font-normal"><i class="fas fa-trash"></i> Borrar Lista</button>`;
+                }
+                thHTML += `</th>`;
+            });
+            if(isAdmin) thHTML += '<th class="py-4 px-4 text-center w-24">Acciones</th>'; thead.innerHTML = thHTML;
+
+            tbody.innerHTML = filtrados.length ? filtrados.map(p => {
+                let costoFormateado = Math.round(p.costo).toLocaleString('es-AR');
+                let tdHTML = `<td class="py-3 px-4 text-[#8b949e] font-bold text-xs">${p.sku || '-'}</td><td class="py-3 px-4 font-bold text-white">${p.nombre}</td>`;
+                if(isAdmin) tdHTML += `<td class="py-3 px-4 text-center font-bold text-[#8b949e]">$${costoFormateado}</td>`;
+
+                listasOrdenadas.forEach(l => { 
+                    const multiplicador = 1 + (l.margen / 100); 
+                    const varCostPerc = (l.costoVariable || 0) / 100; 
+                    const precio = Math.round(p.costo * multiplicador); 
+                    const varCost = precio * varCostPerc; 
+                    const ganancia = Math.round(precio - p.costo - varCost); 
+                    const margenReal = precio > 0 ? ((ganancia / precio) * 100).toFixed(1) : 0;
+                    
+                    tdHTML += `<td class="py-3 px-4 text-center border-l border-[#30363d]"><span class="block text-lg font-bold text-[#00bfff]">$${precio.toLocaleString('es-AR')}</span>`;
+                    if(isAdmin) {
+                        tdHTML += `<span class="block text-[10px] text-[#10b981] font-bold mt-1">Neta: $${ganancia.toLocaleString('es-AR')}</span><span class="block text-[9px] text-[#8b949e]">M.Real: ${margenReal}%</span>`;
+                    }
+                    tdHTML += `</td>`; 
+                });
+                if(isAdmin) tdHTML += `<td class="py-3 px-4 text-center"><button onclick="editarStock('${p.id}')" class="text-[#00bfff] hover:text-[#4dd2ff] mx-1"><i class="fas fa-edit"></i></button><button onclick="borrarStock('${p.id}')" class="text-[#ef4444] hover:text-red-400 mx-1"><i class="fas fa-trash"></i></button></td>`;
+                return `<tr class="hover:bg-[#1e293b]/50 border-b border-[#30363d]">${tdHTML}</tr>`;
+            }).join('') : `<tr><td colspan="${3 + listasOrdenadas.length}" class="py-10 text-center text-[#8b949e] font-bold">No hay productos cargados.</td></tr>`;
+        }
+
+        function abrirModalStock() { document.getElementById('stock-id').value = ''; document.getElementById('stock-sku').value = ''; document.getElementById('stock-nombre').value = ''; document.getElementById('stock-costo').value = ''; document.getElementById('stock-cantidad').value = '1'; document.getElementById('modal-stock-title').innerText = 'Nuevo Artículo'; abrirModalUI('modal-stock'); }
+        function editarStock(id) { const p = db.productos.find(x => x.id === id); if(!p) return; document.getElementById('stock-id').value = p.id; document.getElementById('stock-sku').value = p.sku || ''; document.getElementById('stock-nombre').value = p.nombre; document.getElementById('stock-costo').value = p.costo; document.getElementById('stock-cantidad').value = p.cantidad; document.getElementById('modal-stock-title').innerText = 'Editar Artículo'; abrirModalUI('modal-stock'); }
+        function guardarStock() {
+            const id = document.getElementById('stock-id').value; const sku = document.getElementById('stock-sku').value.trim(); const nombre = document.getElementById('stock-nombre').value.trim(); const costo = parseNumeroSeguro(document.getElementById('stock-costo').value); const cantidad = parseInt(document.getElementById('stock-cantidad').value) || 0;
+            if(!nombre) return mostrarToast('El nombre es obligatorio', 'bg-[#ef4444]');
+            if(id) { const p = db.productos.find(x => x.id === id); if(p) { p.sku = sku; p.nombre = nombre; p.costo = costo; p.cantidad = cantidad; } } 
+            else { db.productos.push({ id: generarId(), sku, nombre, costo, cantidad, imagenBase64: '' }); }
+            guardarBD(); cerrarModal('modal-stock'); actualizarUI(); mostrarToast('Artículo guardado', 'bg-[#10b981]');
+        }
+        function borrarStock(id) { 
+            pedirConfirmacion('¿Borrar este producto?', () => { 
+                db.productos = db.productos.filter(x => x.id !== id); 
+                guardarBD(); 
+                actualizarUI(); 
+                mostrarToast('Producto eliminado', 'bg-[#ef4444]'); 
+            }); 
+        }
+
+        function abrirModalLista() { document.getElementById('lista-id').value = ''; document.getElementById('lista-nombre').value = ''; document.getElementById('lista-margen').value = ''; document.getElementById('lista-costo-var').value = ''; document.getElementById('modal-lista-title').innerText = 'Nueva Lista'; abrirModalUI('modal-lista'); }
+        function editarLista(id) { const l = db.listasPrecio.find(x => x.id === id); if(!l) return; document.getElementById('lista-id').value = l.id; document.getElementById('lista-nombre').value = l.nombre; document.getElementById('lista-margen').value = l.margen; document.getElementById('lista-costo-var').value = l.costoVariable || 0; document.getElementById('modal-lista-title').innerText = 'Editar Lista'; abrirModalUI('modal-lista'); }
+        function guardarLista() {
+            const id = document.getElementById('lista-id').value; const nombre = document.getElementById('lista-nombre').value.trim(); const margen = parseFloat(document.getElementById('lista-margen').value) || 0; const costoVar = parseFloat(document.getElementById('lista-costo-var').value) || 0;
+            if(!nombre) return mostrarToast('El nombre es obligatorio', 'bg-[#ef4444]');
+            if(id) { const l = db.listasPrecio.find(x => x.id === id); if(l) { l.nombre = nombre; l.margen = margen; l.costoVariable = costoVar; } } else { db.listasPrecio.push({ id: generarId(), nombre, margen, costoVariable: costoVar }); }
+            guardarBD(); cerrarModal('modal-lista'); actualizarUI(); mostrarToast('Lista guardada', 'bg-[#10b981]');
+        }
+        function borrarLista(id) { pedirConfirmacion('¿Borrar esta lista de precios?', () => { db.listasPrecio = db.listasPrecio.filter(x => x.id !== id); guardarBD(); actualizarUI(); mostrarToast('Lista eliminada', 'bg-[#ef4444]'); }); }
+
+        function renderClientes() {
+            const tbody = document.getElementById('lista-clientes-tabla'); const search = document.getElementById('buscador-clientes') ? document.getElementById('buscador-clientes').value.toLowerCase() : ''; if(!tbody) return;
+            const filtrados = db.clientes.filter(c => c.nombre.toLowerCase().includes(search)); const isAdmin = currentUser && currentUser.rol === 'admin';
+            tbody.innerHTML = filtrados.length ? filtrados.map(c => `<tr class="hover:bg-[#1e293b]/50 transition border-b border-[#30363d]"><td class="py-3 px-4 font-bold text-white">${c.nombre}</td><td class="py-3 px-4 text-[#c9d1d9]">${c.tel}</td><td class="py-3 px-4 text-[#8b949e] text-xs">${c.direccion || '-'}</td><td class="py-3 px-4 text-center"><span class="bg-[#0d1117] border border-[#30363d] text-[#8b949e] text-[10px] font-bold px-2 py-1 rounded uppercase">${c.tipo}</span></td><td class="py-3 px-4 text-center"><button onclick="editarCliente('${c.id}')" class="text-[#00bfff] hover:text-white bg-[#0d1117] border border-[#30363d] p-2 rounded-lg mx-1"><i class="fas fa-edit"></i></button>${isAdmin ? `<button onclick="borrarCliente('${c.id}')" class="text-[#ef4444] hover:text-red-400 bg-[#0d1117] border border-[#30363d] p-2 rounded-lg mx-1"><i class="fas fa-trash"></i></button>` : ''}</td></tr>`).join('') : `<tr><td colspan="${isAdmin ? 5 : 4}" class="py-10 text-center text-[#8b949e] font-bold">No hay clientes.</td></tr>`;
+        }
+
+        function abrirModalCliente() { document.getElementById('cliente-id').value = ''; document.getElementById('m-cli-nombre').value = ''; document.getElementById('m-cli-tel').value = ''; document.getElementById('m-cli-dir').value = ''; document.getElementById('m-cli-tipo').value = 'Minorista'; document.getElementById('modal-cliente-title').innerText = 'Nuevo Cliente'; abrirModalUI('modal-cliente'); }
+        function editarCliente(id) { const c = db.clientes.find(x => x.id === id); if(!c) return; document.getElementById('cliente-id').value = c.id; document.getElementById('m-cli-nombre').value = c.nombre; document.getElementById('m-cli-tel').value = c.tel; document.getElementById('m-cli-dir').value = c.direccion || ''; document.getElementById('m-cli-tipo').value = c.tipo; document.getElementById('modal-cliente-title').innerText = 'Editar Cliente'; abrirModalUI('modal-cliente'); }
+        function guardarClienteModal() {
+            const id = document.getElementById('cliente-id').value; const nombre = document.getElementById('m-cli-nombre').value.trim(); const tel = document.getElementById('m-cli-tel').value.trim(); const dir = document.getElementById('m-cli-dir').value.trim(); const tipo = document.getElementById('m-cli-tipo').value;
+            if(!nombre) return mostrarToast('El nombre es obligatorio', 'bg-[#ef4444]');
+            if(id) { const c = db.clientes.find(x => x.id === id); if(c) { c.nombre = nombre; c.tel = tel; c.direccion = dir; c.tipo = tipo; } } else { db.clientes.push({ id: generarId(), nombre, tel, direccion: dir, tipo }); }
+            guardarBD(); cerrarModal('modal-cliente'); actualizarUI(); mostrarToast('Cliente guardado', 'bg-[#10b981]');
+        }
+        function borrarCliente(id) { pedirConfirmacion('¿Borrar este cliente?', () => { db.clientes = db.clientes.filter(x => x.id !== id); guardarBD(); actualizarUI(); mostrarToast('Cliente eliminado', 'bg-[#ef4444]'); }); }
+
+        function renderEmpleados() {
+            if(!currentUser || currentUser.rol !== 'admin') return;
+            const tbody = document.getElementById('lista-directorio-tabla'); if(!tbody) return;
+            tbody.innerHTML = db.empleados.length ? db.empleados.map(e => {
+                const usr = db.usuarios.find(u => u.id === e.idUsuario) || { pin: '?', rol: '?' };
+                return `<tr class="hover:bg-[#1e293b]/50 transition border-b border-[#30363d]"><td class="py-3 px-4 font-bold text-white">${e.nombre}</td><td class="py-3 px-4 text-[#c9d1d9] text-xs">Cel: ${e.tel || '-'}<br>Fam: ${e.telFamiliar || '-'}</td><td class="py-3 px-4 text-[#8b949e] text-xs text-center">${e.fechaIngreso || '-'}</td><td class="py-3 px-4 text-right"><span class="text-[#10b981] font-bold block">$${(parseFloat(e.sueldoBase)||0).toLocaleString('es-AR')}</span><span class="text-[#8b949e] text-[10px]">Comis: ${e.comisionPerc}%</span></td><td class="py-3 px-4 text-center"><span class="bg-[#1e293b] border border-[#334155] px-2 py-1 rounded text-[10px] uppercase font-bold text-white block mb-1">Rol: ${usr.rol}</span><span class="text-[#ef4444] font-bold text-xs"><i class="fas fa-key mr-1"></i>PIN: ${usr.pin}</span></td><td class="py-3 px-4 text-center"><button onclick="editarEmpleado('${e.id}')" class="text-[#00bfff] hover:text-[#4dd2ff] bg-[#0d1117] border border-[#30363d] p-2 rounded-lg mx-1"><i class="fas fa-edit"></i></button><button onclick="borrarEmpleado('${e.id}')" class="text-[#ef4444] hover:text-red-400 bg-[#0d1117] border border-[#30363d] p-2 rounded-lg mx-1"><i class="fas fa-trash"></i></button></td></tr>`;
+            }).join('') : '<tr><td colspan="6" class="py-6 text-center text-[#8b949e] font-bold">No hay personal registrado.</td></tr>';
+        }
+
+        function renderRRHH() {
+            if(!currentUser || currentUser.rol !== 'admin') return;
+            const mesStr = document.getElementById('filtro-mes-rrhh').value; if(!mesStr) return;
+            const ventasMes = db.caja.filter(m => m.fecha.startsWith(mesStr) && (m.tipo === 'ingreso' || m.tipo === 'venta') && m.vendedor && m.vendedor !== 'Sin Vendedor' && m.vendedor !== 'N/A');
+            const ventasPorVendedor = {}; ventasMes.forEach(v => { if(!ventasPorVendedor[v.vendedor]) { ventasPorVendedor[v.vendedor] = 0; } ventasPorVendedor[v.vendedor] += v.monto; });
+            const tbody = document.getElementById('lista-rrhh-tabla'); let totalBaseGral = 0; let totalComisionesGral = 0;
+            if(db.empleados.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-[#8b949e] font-bold text-sm">No hay empleados para liquidar.</td></tr>'; } else {
+                tbody.innerHTML = db.empleados.map(emp => {
+                    const ventasTotales = ventasPorVendedor[emp.nombre] || 0; const fraccionComision = (emp.comisionPerc || 0) / 100; const comision = Math.round(ventasTotales * fraccionComision); const sueldoBase = parseFloat(emp.sueldoBase) || 0; const totalLiquidar = Math.round(sueldoBase + comision); totalBaseGral += sueldoBase; totalComisionesGral += comision;
+                    return `<tr class="hover:bg-[#1e293b]/50 transition border-b border-[#30363d]"><td class="py-4 px-6 text-white font-bold flex items-center"><div class="w-8 h-8 rounded-lg bg-[#00bfff]/20 text-[#00bfff] flex items-center justify-center mr-3 border border-[#00bfff]/30"><i class="fas fa-user"></i></div> <div class="flex flex-col"><span>${emp.nombre}</span></div></td><td class="py-4 px-6 text-right text-[#c9d1d9] font-medium border-l border-[#30363d]">$${ventasTotales.toLocaleString('es-AR')}</td><td class="py-4 px-6 text-right text-[#10b981] font-black border-l border-[#30363d] bg-[#10b981]/5">+ $${comision.toLocaleString('es-AR')} <span class="text-[9px] text-[#8b949e] block font-normal">(${emp.comisionPerc}%)</span></td><td class="py-4 px-6 text-right text-[#c9d1d9] font-medium border-l border-[#30363d]">$${sueldoBase.toLocaleString('es-AR')}</td><td class="py-4 px-6 text-right text-[#00bfff] font-black text-lg border-l border-[#30363d] bg-[#00bfff]/5">$${totalLiquidar.toLocaleString('es-AR')}</td></tr>`;
+                }).join('');
+            }
+            document.getElementById('rrhh-tot-base').innerText = '$ ' + totalBaseGral.toLocaleString('es-AR'); 
+            document.getElementById('rrhh-tot-comisiones').innerText = '$ ' + totalComisionesGral.toLocaleString('es-AR'); 
+            document.getElementById('rrhh-tot-general').innerText = '$ ' + (totalBaseGral + totalComisionesGral).toLocaleString('es-AR');
+        }
+
+        function abrirModalEmpleado() { document.getElementById('emp-id').value = ''; document.getElementById('emp-nombre').value = ''; document.getElementById('emp-tel').value = ''; document.getElementById('emp-dir').value = ''; document.getElementById('emp-telfam').value = ''; document.getElementById('emp-ingreso').value = ''; document.getElementById('emp-sueldo').value = ''; document.getElementById('emp-comision').value = '1.5'; document.getElementById('emp-modalidad').value = 'Mensual'; document.getElementById('emp-pin').value = ''; document.getElementById('emp-rol').value = 'vendedor'; document.getElementById('modal-empleado-title').innerText = 'Ficha de Empleado y Acceso'; abrirModalUI('modal-empleado'); }
+        function editarEmpleado(id) { const e = db.empleados.find(x => x.id === id); if(!e) return; document.getElementById('emp-id').value = e.id; document.getElementById('emp-nombre').value = e.nombre; document.getElementById('emp-tel').value = e.tel || ''; document.getElementById('emp-dir').value = e.direccion || ''; document.getElementById('emp-telfam').value = e.telFamiliar || ''; document.getElementById('emp-ingreso').value = e.fechaIngreso || ''; document.getElementById('emp-sueldo').value = e.sueldoBase || 0; document.getElementById('emp-comision').value = e.comisionPerc || 0; document.getElementById('emp-modalidad').value = e.modalidadPago || 'Mensual'; const u = db.usuarios.find(user => user.id === e.idUsuario); if(u) { document.getElementById('emp-pin').value = u.pin || ''; document.getElementById('emp-rol').value = u.rol || 'vendedor'; } document.getElementById('modal-empleado-title').innerText = 'Editar Ficha y Acceso'; abrirModalUI('modal-empleado'); }
+        function guardarEmpleado() {
+            const id = document.getElementById('emp-id').value; const nombre = document.getElementById('emp-nombre').value.trim(); const tel = document.getElementById('emp-tel').value.trim(); const dir = document.getElementById('emp-dir').value.trim(); const telFam = document.getElementById('emp-telfam').value.trim(); const ingreso = document.getElementById('emp-ingreso').value; const modalidadPago = document.getElementById('emp-modalidad').value; const sueldoBase = parseNumeroSeguro(document.getElementById('emp-sueldo').value); const comisionPerc = parseNumeroSeguro(document.getElementById('emp-comision').value); const pin = document.getElementById('emp-pin').value.trim(); const rol = document.getElementById('emp-rol').value;
+            if(!nombre || !pin) return mostrarToast('El nombre y el PIN son obligatorios', 'bg-[#ef4444]');
+            if(id) { const e = db.empleados.find(x => x.id === id); if(e) { e.nombre = nombre; e.tel = tel; e.direccion = dir; e.telFamiliar = telFam; e.fechaIngreso = ingreso; e.modalidadPago = modalidadPago; e.sueldoBase = sueldoBase; e.comisionPerc = comisionPerc; const u = db.usuarios.find(user => user.id === e.idUsuario); if(u) { u.nombre = nombre; u.pin = pin; u.rol = rol; } } } 
+            else { let newUserId = generarId(); db.usuarios.push({ id: newUserId, nombre: nombre, pin: pin, rol: rol }); db.empleados.push({ id: generarId(), idUsuario: newUserId, nombre, tel, direccion: dir, telFamiliar: telFam, fechaIngreso: ingreso, modalidadPago, sueldoBase, comisionPerc }); }
+            guardarBD(); cerrarModal('modal-empleado'); actualizarUI(); cargarDesplegablesVendedores(); mostrarToast('Ficha guardada', 'bg-[#10b981]');
+        }
+        function borrarEmpleado(id) { pedirConfirmacion('¿Borrar empleado y revocar su acceso al sistema?', () => { const emp = db.empleados.find(e => e.id === id); if(emp) { db.usuarios = db.usuarios.filter(u => u.id !== emp.idUsuario); db.empleados = db.empleados.filter(e => e.id !== id); } guardarBD(); actualizarUI(); cargarDesplegablesVendedores(); mostrarToast('Empleado eliminado', 'bg-[#ef4444]'); }); }
+
+        function calcularTotalSueldo(manualEdit = false) {
+            const nom = document.getElementById('sueldo-empleado').value; const emp = db.empleados.find(e => e.nombre === nom); const sueldoMensual = emp ? (parseFloat(emp.sueldoBase) || 0) : 0; const modalidad = emp ? (String(emp.modalidadPago).toLowerCase() || 'mensual') : 'mensual';
+            let valorDia = 0; if (modalidad === 'semanal') { valorDia = (sueldoMensual / 4) / 6; } else if (modalidad === 'quincenal') { valorDia = (sueldoMensual / 2) / 15; } else { valorDia = sueldoMensual / 30; }
+            const fDesde = document.getElementById('sueldo-desde').value; const fHasta = document.getElementById('sueldo-hasta').value;
+            let diasPeriodo = 0; if(fDesde && fHasta) { const d1 = new Date(fDesde + 'T00:00:00'); const d2 = new Date(fHasta + 'T00:00:00'); diasPeriodo = Math.max(0, Math.ceil((d2 - d1) / (1000 * 60 * 60 * 24)) + 1); }
+            let baseLiquidar = 0; if(modalidad === 'mensual' && diasPeriodo >= 28 && diasPeriodo <= 31) { baseLiquidar = sueldoMensual; } else { baseLiquidar = Math.round(valorDia * diasPeriodo); }
+            if(!manualEdit && fDesde && fHasta) { document.getElementById('sueldo-base').value = baseLiquidar; }
+            const baseIngresado = parseFloat(document.getElementById('sueldo-base').value) || 0; const extras = parseFloat(document.getElementById('sueldo-premios').value) || 0; const vales = parseFloat(document.getElementById('sueldo-vales').value) || 0; const diasFalta = parseFloat(document.getElementById('sueldo-faltas-dias').value) || 0; const descuentoFaltas = Math.round(valorDia * diasFalta);
+            const lblFaltas = document.getElementById('lbl-descuento-faltas'); if(diasFalta > 0) { lblFaltas.innerText = `Descuento: $${descuentoFaltas.toLocaleString('es-AR')}`; lblFaltas.classList.remove('hidden'); } else { lblFaltas.classList.add('hidden'); }
+            let comisionCalculada = 0; const porcentajeValor = emp ? (parseFloat(emp.comisionPerc) || 0) : 0;
+            if(fDesde && fHasta && nom) { const ventasMes = db.caja.filter(m => m.fecha >= fDesde && m.fecha <= fHasta && (m.tipo === 'ingreso' || m.tipo === 'venta') && m.vendedor === nom); let totalVentas = 0; ventasMes.forEach(v => totalVentas += v.monto); comisionCalculada = Math.round(totalVentas * (porcentajeValor / 100)); }
+            const total = baseIngresado + comisionCalculada + extras - vales - descuentoFaltas; document.getElementById('sueldo-total-neto').innerText = '$' + Math.max(0, total).toLocaleString('es-AR');
+        }
+
+        function imprimirReciboSueldo() {
+            const nombre = document.getElementById('sueldo-empleado').value; const fDesde = document.getElementById('sueldo-desde').value; const fHasta = document.getElementById('sueldo-hasta').value;
+            if(!nombre || !fDesde || !fHasta) return mostrarToast('Seleccioná empleado y fechas', 'bg-[#ef4444]');
+            const emp = db.empleados.find(e => e.nombre === nombre); const base = parseFloat(document.getElementById('sueldo-base').value) || 0; 
+            let comisionCalculada = 0; const porcentajeValor = emp ? (parseFloat(emp.comisionPerc) || 0) : 0; const ventasMes = db.caja.filter(m => m.fecha >= fDesde && m.fecha <= fHasta && (m.tipo === 'ingreso' || m.tipo === 'venta') && m.vendedor === nombre); let totalVentas = 0; ventasMes.forEach(v => totalVentas += v.monto); comisionCalculada = Math.round(totalVentas * (porcentajeValor / 100));
+            const extras = parseFloat(document.getElementById('sueldo-premios').value) || 0; const vales = parseFloat(document.getElementById('sueldo-vales').value) || 0; 
+            const sueldoMensual = emp ? (parseFloat(emp.sueldoBase) || 0) : 0; let valorDia = sueldoMensual / 30; const diasFalta = parseFloat(document.getElementById('sueldo-faltas-dias').value) || 0; const faltas = Math.round(valorDia * diasFalta); const descuentos = vales + faltas; 
+            const neto = base + comisionCalculada + extras - descuentos; const dStr = fDesde.split('-').reverse().join('/'); const hStr = fHasta.split('-').reverse().join('/'); const periodo = `${dStr} al ${hStr}`;
+            const { jsPDF } = window.jspdf; const doc = new jsPDF(); const nombreEmpresa = db.config.nombreEmpresa || 'Mi Negocio';
+            doc.setFont("helvetica", "bold"); doc.setFontSize(22); doc.setTextColor(0, 191, 255); doc.text(nombreEmpresa, 105, 20, null, null, "center"); doc.setFontSize(10); doc.setFont("helvetica", "normal"); doc.setTextColor(100, 100, 100); doc.text("Documento interno sin valor fiscal", 105, 26, null, null, "center"); doc.line(20, 32, 190, 32); doc.setFontSize(14); doc.setFont("helvetica", "bold"); doc.setTextColor(0, 0, 0); doc.text("LIQUIDACIÓN DE HABERES Y COMISIONES", 105, 42, null, null, "center"); doc.setFontSize(11); doc.setFont("helvetica", "normal"); doc.text(`Empleado/a: ${nombre}`, 20, 54); doc.text(`Período Liquidado: ${periodo}`, 20, 62); doc.text(`Fecha de Emisión: ${hoyString()}`, 130, 54); doc.line(20, 69, 190, 69);
+            let y = 79; doc.text("Sueldo Base Proporcional:", 20, y); doc.text(`$${base.toLocaleString('es-AR')}`, 160, y); y += 10; doc.text(`Comisiones por Ventas (${porcentajeValor}%):`, 20, y); doc.text(`$${comisionCalculada.toLocaleString('es-AR')}`, 160, y); y += 10; if(extras > 0) { doc.text("Adicionales / Premios:", 20, y); doc.text(`$${extras.toLocaleString('es-AR')}`, 160, y); y += 10; } if(descuentos > 0) { doc.text("Descuentos (Adelantos / Faltas):", 20, y); doc.text(`- $${descuentos.toLocaleString('es-AR')}`, 160, y); y += 10; }
+            doc.line(20, y+2, 190, y+2); y += 12; doc.setFont("helvetica", "bold"); doc.setFontSize(13); doc.text("TOTAL NETO A COBRAR:", 20, y); doc.text(`$${neto.toLocaleString('es-AR')}`, 160, y); doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.text("___________________________________", 60, y + 40, null, null, "center"); doc.text("Firma del Empleador", 60, y + 45, null, null, "center"); doc.text("___________________________________", 150, y + 40, null, null, "center"); doc.text("Firma del Empleado/a", 150, y + 45, null, null, "center");
+            doc.save(`Recibo_Sueldo_${nombre.replace(/\s+/g, '_')}.pdf`);
+        }
+
+        function calcularMeta() {
+            const fijosStr = document.getElementById('sim-fijos').value.replace(/\./g, ''); const fijos = parseFloat(fijosStr) || 0;
+            const margenStr = document.getElementById('sim-margen').value; const margen = parseFloat(margenStr) || 0;
+            const objetivoStr = document.getElementById('sim-objetivo').value.replace(/\./g, ''); const objetivo = parseFloat(objetivoStr) || 0;
+            if (margen <= 0) { document.getElementById('sim-resultado').innerText = 'Faltan datos'; return; }
+            const ventasNecesarias = (fijos + objetivo) / (margen / 100);
+            document.getElementById('sim-resultado').innerText = '$ ' + Math.round(ventasNecesarias).toLocaleString('es-AR');
+        }
+
+        function guardarGastoFijo() {
+            const concepto = document.getElementById('gf-concepto').value.trim(); const monto = parseFloat(document.getElementById('gf-monto').value); const mes = document.getElementById('filtro-mes-rentabilidad').value;
+            if(!concepto || isNaN(monto) || monto <= 0) return mostrarToast('Ingresá detalle y monto', 'bg-[#ef4444]'); if(!mes) return mostrarToast('Seleccioná el mes en el filtro de arriba', 'bg-[#f59e0b]');
+            db.gastosFijos.push({ id: generarId(), mes: mes, concepto: concepto, monto: monto }); guardarBD(); document.getElementById('gf-concepto').value = ''; document.getElementById('gf-monto').value = ''; actualizarUI(); mostrarToast('Gasto Fijo guardado', 'bg-[#10b981]');
+        }
+        function borrarGastoFijo(id) { db.gastosFijos = db.gastosFijos.filter(g => g.id !== id); guardarBD(); actualizarUI(); }
+        
+        function renderRentabilidad() {
+            if(!currentUser || currentUser.rol !== 'admin') return;
+            const mesActual = document.getElementById('filtro-mes-rentabilidad').value; if(!mesActual) return;
+            let ingresosBrutos = 0, costoMercaderia = 0, costoVariable = 0;
+            db.caja.forEach(m => { if(m.fecha.startsWith(mesActual) && (m.tipo === 'venta' || m.tipo === 'ingreso')) { ingresosBrutos += (m.monto || 0); costoMercaderia += (m.costoAsociado || 0); costoVariable += (m.costoVariableAsociado || 0); } });
+            const gastosMes = db.gastosFijos.filter(g => g.mes === mesActual); let totalFijos = 0;
+            const container = document.getElementById('lista-gastos-fijos');
+            if(container) { container.innerHTML = gastosMes.map(g => { totalFijos += g.monto; return `<div class="flex justify-between items-center bg-[#161b22] p-3 rounded-xl border border-[#30363d] shadow-sm"><span class="text-sm font-bold text-white line-clamp-1">${g.concepto}</span><div class="flex items-center gap-3"><span class="text-sm font-bold text-[#8b949e]">$${g.monto.toLocaleString('es-AR')}</span><button onclick="borrarGastoFijo('${g.id}')" class="text-[#ef4444] hover:text-red-400"><i class="fas fa-times-circle"></i></button></div></div>`; }).join(''); document.getElementById('rent-total-fijos-lbl').innerText = '$' + totalFijos.toLocaleString('es-AR'); }
+            
+            const contribucion = ingresosBrutos - costoMercaderia - costoVariable; const neta = contribucion - totalFijos; const margen = ingresosBrutos > 0 ? (neta / ingresosBrutos) * 100 : 0;
+            document.getElementById('rent-ingresos').innerText = '$ ' + Math.round(ingresosBrutos).toLocaleString('es-AR'); 
+            document.getElementById('rent-costos').innerText = '$ ' + Math.round(costoMercaderia).toLocaleString('es-AR'); 
+            document.getElementById('rent-gastos-variables').innerText = '$ ' + Math.round(costoVariable).toLocaleString('es-AR'); 
+            document.getElementById('rent-contribucion').innerText = '$ ' + Math.round(contribucion).toLocaleString('es-AR'); 
+            document.getElementById('rent-neta').innerText = '$ ' + Math.round(neta).toLocaleString('es-AR'); 
+            document.getElementById('rent-margen').innerText = `Margen Real: ${margen.toFixed(1)}%`;
+
+            let margenContribucionPerc = ingresosBrutos > 0 ? (contribucion / ingresosBrutos) * 100 : 0;
+            document.getElementById('sim-fijos').value = totalFijos.toLocaleString('es-AR');
+            if(margenContribucionPerc > 0) { document.getElementById('sim-margen').value = margenContribucionPerc.toFixed(1); }
+            calcularMeta();
+        }
+
+ <script>
+        // ESCUDO ANTE ERRORES CRITICOS (Si falla algo, te lo mostrará en pantalla en rojo en vez de quedar negra)
+        window.addEventListener('error', function(e) {
+            if(e.message.includes('Script error')) return;
+            document.body.innerHTML += '<div style="position:fixed;top:0;left:0;right:0;background:red;color:white;padding:20px;z-index:999999;font-weight:bold;">Error en el sistema: ' + e.message + '</div>';
+        });
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDsnmGmAaRjIV1QbrNy6Hpn5NZG8yQNY0c",
+            authDomain: "jorge-hogar-erp.firebaseapp.com",
+            projectId: "jorge-hogar-erp",
+            storageBucket: "jorge-hogar-erp.firebasestorage.app",
+            messagingSenderId: "532159877469",
+            appId: "1:532159877469:web:11d0d34e5a97762e8c98b4"
+        };
+
+        let firestoreDb = null; let esModoNube = false; let firebaseLoaded = false;
+        try { 
+            if (typeof firebase !== 'undefined') {
+                firebase.initializeApp(firebaseConfig); 
+                firestoreDb = firebase.firestore(); 
+                esModoNube = true; 
+            }
+        } catch(err) { console.warn("Error Firebase local, usando modo offline:", err); }
+
+        // FIX VERCEL: Permite que Whatsapp abra el catálogo sin deformar la URL
+        const isTiendaWeb = window.location.href.toLowerCase().includes('modo=tienda');
+
+        let mostrarSinFotos = false;
+
+        function debounce(func, wait) { let timeout; return function(...args) { clearTimeout(timeout); timeout = setTimeout(() => func.apply(this, args), wait); }; }
+        const debouncedActualizarPrecioPos = debounce(() => actualizarPrecioPos(), 200); 
+        const debouncedRenderStock = debounce(() => renderStock(), 200); 
+        const debouncedRenderPrecios = debounce(() => renderPrecios(), 200); 
+        const debouncedRenderClientes = debounce(() => renderClientes(), 200);
+        const debouncedRenderTienda = debounce(() => renderTiendaWeb(), 200);
+
+        function formatCurrencyInput(input) {
+            let val = input.value.replace(/\D/g, '');
+            if(val === '') { input.value = ''; return; }
+            input.value = parseInt(val, 10).toLocaleString('es-AR');
+        }
+
+        function parseNumeroSeguro(val) {
+            if (val === undefined || val === null || val === '') return 0;
+            if (typeof val === 'number') return Math.round(val * 100) / 100;
+            let str = String(val).trim().replace(/\$/g, '').trim();
+            if (str.includes('.') && str.includes(',')) { str = str.replace(/\./g, '').replace(',', '.'); } 
+            else if (str.includes(',')) { str = str.replace(',', '.'); } 
+            else if (str.includes('.')) {
+                const partes = str.split('.');
+                if (partes.length > 2 || (partes.length === 2 && partes.length === 3 && partes[0].length <= 3)) { str = str.replace(/\./g, ''); }
+            }
+            let num = parseFloat(str);
+            if (isNaN(num)) return 0;
+            return Math.round(num * 100) / 100;
+        }
+
+        function repararNumeroDeformado(n) {
+            if (typeof n !== 'number' || isNaN(n) || n <= 0) return 0;
+            if (n < 5000000) return Math.round(n * 100) / 100;
+            for (let power of [12, 13, 14, 11, 15, 10, 9]) {
+                let candidate = n / Math.pow(10, power);
+                let rounded = Math.round(candidate);
+                if (Math.abs(candidate - rounded) < 0.001 && candidate >= 50 && candidate <= 5000000) return rounded;
+                let roundedDec = Math.round(candidate * 2) / 2;
+                if (Math.abs(candidate - roundedDec) < 0.001 && candidate >= 50 && candidate <= 5000000) return roundedDec;
+                let roundedCents = Math.round(candidate * 100) / 100;
+                if (Math.abs(candidate - roundedCents) < 0.001 && candidate >= 50 && candidate <= 5000000) return roundedCents;
+            }
+            return n;
+        }
+
+        function autoRepararPreciosCorruptos() {
+            let corregidos = 0;
+            if (db.productos && Array.isArray(db.productos)) {
+                db.productos.forEach(p => {
+                    let anterior = p.costo;
+                    let nuevo = repararNumeroDeformado(p.costo);
+                    if (anterior !== nuevo) { p.costo = nuevo; corregidos++; }
+                });
+            }
+            if (corregidos > 0) guardarBD();
+        }
+
+        function forzarReparacionPrecios() {
+            autoRepararPreciosCorruptos();
+            actualizarUI();
+            mostrarToast("Precios recalculados y corregidos con éxito", "bg-[#10b981]");
+        }
+
+        let db = { config: {}, usuarios: [], empleados: [], productos: [], listasPrecio: [], clientes: [], caja: [], gastosFijos: [], presupuestos: [], entregas: [] };
+        try {
+            const saved = localStorage.getItem('jorge_hogar_erp_v28');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (parsed && typeof parsed === 'object') db = { ...db, ...parsed };
+            }
+        } catch (e) { console.warn("Error leyendo DB local:", e); }
+        
+        // BLINDAJE DE MEMORIA PARA EVITAR PANTALLA NEGRA
+        function verificarIntegridadDB() {
+            if(!db.config || typeof db.config !== 'object') db.config = { nombreEmpresa: 'Gesto Smart', logoBase64: '', nextPresupuesto: 1, nextRemito: 1, whatsappTurnos: '' };
+            if(!db.config.nextPresupuesto) db.config.nextPresupuesto = 1;
+            if(!db.config.nextRemito) db.config.nextRemito = 1;
+            
+            const arrays = ['usuarios', 'empleados', 'productos', 'listasPrecio', 'clientes', 'caja', 'gastosFijos', 'presupuestos', 'entregas'];
+            arrays.forEach(key => { 
+                if (!Array.isArray(db[key])) db[key] = []; 
+            });
+
+            if(db.usuarios.length === 0) db.usuarios = [ { id: 'u1', nombre: 'Admin', pin: '1234', rol: 'admin' } ];
+            if(db.listasPrecio.length === 0) db.listasPrecio.push({ id: '1', nombre: 'Precio Público (Web)', margen: 25, costoVariable: 0 });
+        }
+        
+        verificarIntegridadDB();
+
+        let currentUser = null; let accionPendiente = null; let carrito = []; let carritoWeb = [];
+
+        function guardarBD() { 
+            try {
+                localStorage.setItem('jorge_hogar_erp_v28', JSON.stringify(db));
+                if(esModoNube && firestoreDb) {
+                    firestoreDb.collection("erp").doc("jorge_hogar_v28").set(db).catch(e => console.warn("Error Sync:", e));
+                }
+            } catch (e) { console.warn("Error al guardar:", e); }
+        }
+        
+        const generarId = () => Date.now().toString(36) + Math.random().toString(36).substr(2);
+        const hoyString = () => { const now = new Date(); return now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, '0') + "-" + String(now.getDate()).padStart(2, '0'); };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                const elFechaCaja = document.getElementById('fecha-caja'); if(elFechaCaja) elFechaCaja.value = hoyString(); 
+                const elFechaDep = document.getElementById('fecha-deposito'); if(elFechaDep) elFechaDep.value = hoyString(); 
+                const elFiltroRrhh = document.getElementById('filtro-mes-rrhh'); if(elFiltroRrhh) elFiltroRrhh.value = hoyString().substring(0, 7); 
+                const elFiltroRent = document.getElementById('filtro-mes-rentabilidad'); if(elFiltroRent) elFiltroRent.value = hoyString().substring(0, 7);
+                
+                const fComDesde = document.getElementById('sueldo-desde'); 
+                const fComHasta = document.getElementById('sueldo-hasta');
+                if(fComDesde && fComHasta) { 
+                    const hoy = new Date(); 
+                    fComDesde.value = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0]; 
+                    fComHasta.value = hoyString(); 
+                }
+                
+                aplicarConfiguracion();
+                autoRepararPreciosCorruptos();
+
+                let fallbackTimeout;
+                if(esModoNube && firestoreDb) {
+                    fallbackTimeout = setTimeout(() => {
+                        if(!firebaseLoaded) {
+                            firebaseLoaded = true;
+                            iniciarAppSegunRouting();
+                        }
+                    }, 3500);
+
+                    firestoreDb.collection("erp").doc("jorge_hogar_v28").onSnapshot(doc => {
+                        clearTimeout(fallbackTimeout);
+                        try {
+                            if(doc.exists) { 
+                                db = doc.data(); 
+                                verificarIntegridadDB();
+                                autoRepararPreciosCorruptos();
+                            } else { 
+                                firestoreDb.collection("erp").doc("jorge_hogar_v28").set(db).catch(()=>{}); 
+                            }
+                            localStorage.setItem('jorge_hogar_erp_v28', JSON.stringify(db));
+                            
+                            if(!firebaseLoaded) {
+                                firebaseLoaded = true; 
+                                iniciarAppSegunRouting();
+                            } else {
+                                if(currentUser) {
+                                    const userFresco = db.usuarios.find(u => u.id === currentUser.id);
+                                    if(userFresco && userFresco.rol !== currentUser.rol) { 
+                                        currentUser.rol = userFresco.rol; 
+                                        const rolActualEl = document.getElementById('lbl-rol-actual');
+                                        if(rolActualEl) rolActualEl.innerText = currentUser.rol; 
+                                        aplicarPermisosRol(); 
+                                    }
+                                    actualizarUI();
+                                } else if(!isTiendaWeb) {
+                                    const select = document.getElementById('login-user');
+                                    if(select) { 
+                                        const val = select.value; 
+                                        select.innerHTML = db.usuarios.map(u => `<option value="${u.id}">${u.nombre}</option>`).join(''); 
+                                        if(val) select.value = val; 
+                                    }
+                                }
+                                cargarDesplegablesVendedores();
+                                if(isTiendaWeb) renderTiendaWeb();
+                            }
+                        } catch (innerError) {
+                            console.error("Error interno DB:", innerError);
+                            if(!firebaseLoaded) { firebaseLoaded = true; iniciarAppSegunRouting(); }
+                        }
+                    }, error => {
+                        clearTimeout(fallbackTimeout);
+                        console.error("Error de conexión Firebase:", error);
+                        if(!firebaseLoaded) { firebaseLoaded = true; iniciarAppSegunRouting(); }
+                    });
+
+                } else { 
+                    iniciarAppSegunRouting();
+                }
+            } catch (initError) {
+                console.error("Error crítico de inicialización:", initError);
+                iniciarAppSegunRouting();
+            }
+        });
+
+        function iniciarAppSegunRouting() {
+            const overlay = document.getElementById('carga-overlay-global');
+            if(overlay) { overlay.style.display = 'none'; overlay.classList.add('hidden'); }
+
+            if (isTiendaWeb) {
+                const erpCont = document.getElementById('erp-container');
+                if(erpCont) { erpCont.classList.add('hidden'); erpCont.classList.remove('flex'); }
+                const pubCat = document.getElementById('public-catalog');
+                if(pubCat) { pubCat.classList.remove('hidden'); pubCat.classList.add('flex'); }
+                document.body.classList.add('modo-tienda-activa');
+                
+                const storeNameEl = document.getElementById('store-name');
+                if(storeNameEl) storeNameEl.innerText = db.config.nombreEmpresa || 'Mi Tienda';
+                if(db.config.logoBase64) {
+                    const logo = document.getElementById('store-logo');
+                    if(logo) logo.src = db.config.logoBase64;
+                }
+                renderTiendaWeb();
+            } else {
+                const pubCat = document.getElementById('public-catalog');
+                if(pubCat) { pubCat.classList.add('hidden'); pubCat.classList.remove('flex'); }
+                prepararLogin();
+            }
+        }
+
+        function prepararLogin() { 
+            const erpCont = document.getElementById('erp-container');
+            if(erpCont) { erpCont.classList.add('hidden'); erpCont.classList.remove('flex'); }
+            
+            const select = document.getElementById('login-user'); 
+            if(select && db.usuarios) select.innerHTML = db.usuarios.map(u => `<option value="${u.id}">${u.nombre}</option>`).join(''); 
+            
+            const pantLogin = document.getElementById('pantalla-login');
+            if(pantLogin) { pantLogin.classList.remove('hidden'); pantLogin.classList.add('flex'); }
+            
+            setTimeout(() => {
+                const pinInput = document.getElementById('login-pin');
+                if(pinInput) { pinInput.value = ''; pinInput.focus(); }
+            }, 100);
+        }
+
+        function procesarLogin() {
+            const elUser = document.getElementById('login-user');
+            const elPin = document.getElementById('login-pin');
+            if(!elUser || !elPin) return;
+            
+            const id = elUser.value; 
+            const pin = elPin.value; 
+            const u = db.usuarios.find(x => x.id === id);
+            
+            if(u && u.pin === pin) { 
+                currentUser = u; 
+                document.getElementById('pantalla-login').classList.add('hidden');
+                document.getElementById('pantalla-login').classList.remove('flex');
+                document.getElementById('erp-container').classList.remove('hidden');
+                document.getElementById('erp-container').classList.add('flex');
+                
+                document.getElementById('lbl-usuario-actual').innerText = u.nombre; 
+                document.getElementById('lbl-rol-actual').innerText = u.rol; 
+                aplicarPermisosRol(); 
+                mostrarToast(`Bienvenido/a, ${u.nombre}`, 'bg-[#10b981]'); 
+            } else { 
+                mostrarToast('PIN Incorrecto', 'bg-[#ef4444]'); 
+                elPin.value = ''; 
+            }
+        }
+        
+        function procesarLogout() { 
+            currentUser = null; 
+            const erpCont = document.getElementById('erp-container');
+            if(erpCont) { erpCont.classList.add('hidden'); erpCont.classList.remove('flex'); }
+            prepararLogin(); 
+        }
+
+        function aplicarPermisosRol() {
+            if(!currentUser) return;
+            const rol = currentUser.rol; 
+            
+            if(rol !== 'admin') document.body.classList.add('app-locked');
+            else document.body.classList.remove('app-locked');
+
+            document.querySelectorAll('.tab-link').forEach(link => { 
+                const roles = link.getAttribute('data-roles'); 
+                if(roles) link.style.display = roles.includes(rol) ? 'flex' : 'none'; 
+            });
+            document.querySelectorAll('[data-roles]').forEach(el => { 
+                if(!el.classList.contains('tab-link')) { 
+                    const roles = el.getAttribute('data-roles'); 
+                    el.style.display = roles.includes(rol) ? '' : 'none'; 
+                } 
+            });
+            if(rol === 'vendedor') switchTab('tab-pos', document.querySelector('.tab-link[onclick*="tab-pos"]'));
+            else if (rol === 'cajero') switchTab('tab-caja', document.querySelector('.tab-link[onclick*="tab-caja"]'));
+            else switchTab('tab-rentabilidad', document.querySelector('.tab-link[onclick*="tab-rentabilidad"]'));
+            cargarDesplegablesVendedores(); actualizarUI();
+        }
+
+        function descargarBackup() { 
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db)); 
+            const dlNode = document.createElement('a'); 
+            dlNode.setAttribute("href", dataStr); 
+            dlNode.setAttribute("download", `GestoSmart_Backup_${hoyString()}.json`); 
+            document.body.appendChild(dlNode); dlNode.click(); dlNode.remove(); 
+            mostrarToast("Copia de seguridad descargada", "bg-[#10b981]"); 
+        }
+
+        function restaurarBackup(event) {
+            const file = event.target.files[0]; if (!file) return; const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedDB = JSON.parse(e.target.result); if(!importedDB.usuarios || !importedDB.config) throw new Error("Archivo inválido");
+                    pedirConfirmacion('⚠️ Estás por REEMPLAZAR toda la base de datos actual con este archivo. ¿Continuar?', () => { 
+                        db = importedDB; 
+                        verificarIntegridadDB();
+                        autoRepararPreciosCorruptos();
+                        guardarBD(); 
+                        actualizarUI(); 
+                        mostrarToast("Base de datos restaurada con éxito", "bg-[#10b981]"); 
+                        setTimeout(() => window.location.reload(), 1500); 
+                    });
+                } catch(err) { mostrarToast("Error al restaurar: Archivo corrupto", "bg-[#ef4444]"); }
+            }; reader.readAsText(file);
+        }
+
+        function descargarPlantilla(tipo) {
+            let ws_data = []; let nombreArchivo = "";
+            if (tipo === 'clientes') { 
+                ws_data = [ ["Nombre y Apellido", "Teléfono de contacto", "Dirección", "Tipo (Mayorista/Minorista)"], ["Juan Pérez", "1122334455", "Av. San Martin 123", "Minorista"] ]; 
+                nombreArchivo = "Plantilla_Clientes.xlsx"; 
+            } 
+            else if (tipo === 'empleados') { 
+                ws_data = [ ["Nombre y Apellido", "Teléfono", "Dirección", "Fecha de Ingreso", "Tel. Familiar", "Sueldo Base ($)", "Comisión (%)", "PIN Acceso (4 digitos)", "Rol (admin/vendedor/cajero)"], ["Pablo Vendedor", "1122334455", "Calle Falsa 123", "2024-01-15", "1199887766", 1200000, 1.5, "1111", "vendedor"] ]; 
+                nombreArchivo = "Plantilla_RRHH.xlsx"; 
+            }
+            else if (tipo === 'stock') { 
+                ws_data = [ ["SKU Numérico", "Nombre del Producto", "Costo Base ($)", "Stock Físico"], ["12", "Extractor Aire 150mm ECO AIRE Blanco", 15400, 50], ["296", "Extractor Aire 100mm Grafito", 13300, 20] ]; 
+                nombreArchivo = "Plantilla_Costos_y_Stock.xlsx"; 
+            }
+            const ws = XLSX.utils.aoa_to_sheet(ws_data); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Plantilla"); XLSX.writeFile(wb, nombreArchivo);
+        }
+
+        function importarExcel(tipo, e) {
+            let file = e.target.files[0]; if(!file) return;
+            document.getElementById('carga-overlay-msg').innerText = "Procesando Excel de forma segura..."; 
+            document.getElementById('carga-overlay-global').style.display = 'flex';
+            document.getElementById('carga-overlay-global').classList.remove('hidden');
+            let reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    let data = new Uint8Array(evt.target.result); 
+                    let workbook = XLSX.read(data, {type:'array'}); 
+                    let sheet = workbook.Sheets[workbook.SheetNames[0]]; 
+                    let json = XLSX.utils.sheet_to_json(sheet, {header:1});
+                    if(json.length < 2) throw new Error("El Excel está vacío o le faltan datos.");
+                    let headers = json[0].map(h => String(h||'').toLowerCase().trim()); 
+                    let importados = 0; let actualizados = 0;
+                    
+                    if (tipo === 'clientes') {
+                        let colNom = headers.findIndex(h => h.includes('nombre') || h.includes('apellido')); 
+                        if(colNom === -1) throw new Error("Falta columna: 'Nombre y Apellido'. Asegurate de usar la Plantilla.");
+                        let colTel = headers.findIndex(h => h.includes('tel')); 
+                        let colDir = headers.findIndex(h => h.includes('direcci')); 
+                        let colTipo = headers.findIndex(h => h.includes('tipo') || h.includes('mayorista'));
+                        
+                        for(let i=1; i<json.length; i++) {
+                            let row = json[i]; if(!row || !row[colNom]) continue;
+                            let nombre = String(row[colNom]).trim(); 
+                            let tel = colTel !== -1 && row[colTel] ? String(row[colTel]) : '-'; 
+                            let dir = colDir !== -1 && row[colDir] ? String(row[colDir]) : '-'; 
+                            let tipoCli = colTipo !== -1 && row[colTipo] ? String(row[colTipo]) : 'Minorista';
+                            let existente = db.clientes.find(c => c.nombre.trim().toLowerCase() === nombre.toLowerCase());
+                            if(existente) { existente.tel = tel; existente.direccion = dir; existente.tipo = tipoCli; actualizados++; } 
+                            else { db.clientes.push({ id: generarId(), nombre: nombre, tel: tel, direccion: dir, tipo: tipoCli }); importados++; }
+                        }
+                    } 
+                    else if (tipo === 'empleados') {
+                        let colNom = headers.findIndex(h => h.includes('nombre') || h.includes('apellido')); 
+                        if(colNom === -1) throw new Error("Falta columna: 'Nombre y Apellido'.");
+                        let colTel = headers.findIndex(h => h.includes('tel') && !h.includes('familiar')); 
+                        let colDir = headers.findIndex(h => h.includes('direcci')); 
+                        let colIngreso = headers.findIndex(h => h.includes('ingreso') || h.includes('fecha')); 
+                        let colTelFam = headers.findIndex(h => h.includes('fam') || h.includes('emergencia')); 
+                        let colSueldo = headers.findIndex(h => h.includes('sueldo') || h.includes('base')); 
+                        let colComision = headers.findIndex(h => h.includes('comisi')); 
+                        let colPin = headers.findIndex(h => h.includes('pin') || h.includes('acceso') || h.includes('clave')); 
+                        let colRol = headers.findIndex(h => h.includes('rol') || h.includes('permiso'));
+                        
+                        for(let i=1; i<json.length; i++) {
+                            let row = json[i]; if(!row || !row[colNom]) continue;
+                            let nombre = String(row[colNom]).trim(); 
+                            let tel = colTel !== -1 && row[colTel] ? String(row[colTel]).trim() : ''; 
+                            let dir = colDir !== -1 && row[colDir] ? String(row[colDir]).trim() : ''; 
+                            let rawIngreso = colIngreso !== -1 && row[colIngreso] ? row[colIngreso] : ''; 
+                            let ingreso = ''; 
+                            if (typeof rawIngreso === 'number') { let jsDate = new Date(Math.round((rawIngreso - 25569) * 86400 * 1000)); ingreso = jsDate.toISOString().split('T')[0]; } 
+                            else { ingreso = String(rawIngreso).trim(); }
+                            let telFam = colTelFam !== -1 && row[colTelFam] ? String(row[colTelFam]).trim() : ''; 
+                            let sueldo = parseNumeroSeguro(row[colSueldo]); 
+                            let comision = parseNumeroSeguro(row[colComision]); 
+                            let pin = colPin !== -1 && row[colPin] ? String(row[colPin]).trim() : '1234';
+                            let rawRol = colRol !== -1 && row[colRol] ? String(row[colRol]).toLowerCase().trim() : 'vendedor'; 
+                            let rol = 'vendedor'; if(rawRol.includes('admin')) rol = 'admin'; else if(rawRol.includes('caja') || rawRol.includes('cajer')) rol = 'cajero';
+                            
+                            let existente = db.empleados.find(e => e.nombre.trim().toLowerCase() === nombre.toLowerCase());
+                            if(existente) {
+                                existente.tel = tel; existente.direccion = dir; existente.fechaIngreso = ingreso; existente.telFamiliar = telFam; existente.sueldoBase = sueldo; existente.comisionPerc = comision;
+                                let user = db.usuarios.find(u => u.id === existente.idUsuario); if(user) { user.pin = pin; user.rol = rol; } actualizados++; 
+                            } else {
+                                let newUserId = generarId();
+                                db.usuarios.push({ id: newUserId, nombre: nombre, pin: pin, rol: rol });
+                                db.empleados.push({ id: generarId(), idUsuario: newUserId, nombre, tel, direccion: dir, telFamiliar: telFam, fechaIngreso: ingreso, modalidadPago: 'Mensual', sueldoBase: sueldo, comisionPerc: comision });
+                                importados++;
+                            }
+                        }
+                        cargarDesplegablesVendedores(); renderEmpleados();
+                    }
+                    else if (tipo === 'stock') {
+                        let colSku = headers.findIndex(h => h.includes('sku') || h.includes('cod') || h.includes('numérico'));
+                        let colNom = headers.findIndex(h => h.includes('nombre') || h.includes('producto') || h.includes('descrip')); 
+                        let colCost = headers.findIndex(h => h.includes('costo') || h.includes('base') || h.includes('precio')); 
+                        let colCant = headers.findIndex(h => h.includes('stock') || h.includes('físico') || h.includes('cant'));
+                        
+                        if(colNom === -1 || colCost === -1) throw new Error("Falta columna 'Nombre' o 'Costo'. Asegurate de usar la Plantilla.");
+                        if(colSku === -1) colSku = 0;
+                        
+                        for(let i=1; i<json.length; i++) {
+                            let row = json[i]; if(!row || !row[colNom]) continue;
+                            let rawSku = row[colSku] !== undefined ? String(row[colSku]).trim() : '';
+                            let nombre = String(row[colNom]).trim(); 
+                            let costo = parseNumeroSeguro(row[colCost]);
+                            let cant = colCant !== -1 ? Math.max(0, parseInt(row[colCant]) || 0) : 0;
+                            
+                            let existente = db.productos.find(p => (rawSku && p.sku === rawSku) || p.nombre.toLowerCase() === nombre.toLowerCase());
+                            if(existente) {
+                                existente.sku = rawSku || existente.sku;
+                                existente.nombre = nombre;
+                                existente.costo = costo;
+                                existente.cantidad = cant;
+                                actualizados++; 
+                            } else {
+                                db.productos.push({ id: generarId(), sku: rawSku, nombre: nombre, costo: costo, cantidad: cant, imagenBase64: '' });
+                                importados++;
+                            }
+                        }
+                    }
+                    guardarBD(); actualizarUI(); 
+                    mostrarToast(`Importación exitosa: ${importados} nuevos, ${actualizados} actualizados.`, 'bg-[#10b981]');
+                } catch (error) { 
+                    console.error(error);
+                    mostrarToast(error.message, "bg-[#ef4444]"); 
+                } finally { 
+                    document.getElementById('carga-overlay-global').classList.add('hidden');
+                    document.getElementById('carga-overlay-global').style.display = 'none';
+                    e.target.value = ''; 
+                }
+            }; reader.readAsArrayBuffer(file);
+        }
+
+        async function procesarImagenIndividual(e, id) {
+            const file = e.target.files[0];
+            if(!file) return;
+            
+            const p = db.productos.find(x => x.id === id);
+            if(!p) return;
+
+            document.getElementById('carga-overlay-msg').innerText = "Subiendo foto...";
+            document.getElementById('carga-overlay-global').classList.remove('hidden');
+            document.getElementById('carga-overlay-global').style.display = 'flex';
+
+            try {
+                const compressedBase64 = await comprimirImagenAsincrona(file);
+                p.imagenBase64 = compressedBase64;
+                guardarBD();
+                renderStock();
+                mostrarToast('Foto actualizada con éxito', 'bg-[#10b981]');
+            } catch (err) {
+                console.error("Error subiendo foto:", err);
+                mostrarToast('Error al procesar la foto', 'bg-[#ef4444]');
+            } finally {
+                document.getElementById('carga-overlay-global').classList.add('hidden');
+                document.getElementById('carga-overlay-global').style.display = 'none';
+            }
+        }
+
+        async function procesarImagenesCatalogo(e) {
+            const files = Array.from(e.target.files); 
+            if(!files.length) return;
+            
+            const overlayMsg = document.getElementById('carga-overlay-msg');
+            document.getElementById('carga-overlay-global').classList.remove('hidden');
+            document.getElementById('carga-overlay-global').style.display = 'flex';
+            
+            let vinculadas = 0;
+            const skuMap = new Map();
+            db.productos.forEach(p => { 
+                if (p.sku) skuMap.set(String(p.sku).trim().toLowerCase(), p); 
+                if (p.nombre) skuMap.set(p.nombre.trim().toLowerCase(), p);
+            });
+
+            for(let i=0; i < files.length; i++) {
+                overlayMsg.innerText = `Optimizando ${i+1} de ${files.length} imágenes...`;
+                const file = files[i];
+                const nameParts = file.name.split('.'); 
+                const baseName = nameParts.slice(0, -1).join('.').trim().toLowerCase();
+                
+                const prod = skuMap.get(baseName);
+                if(prod) {
+                    try {
+                        const compressedBase64 = await comprimirImagenAsincrona(file);
+                        prod.imagenBase64 = compressedBase64;
+                        vinculadas++;
+                    } catch(err) {
+                        console.error(`Error procesando SKU/Nombre ${baseName}:`, err);
+                    }
+                }
+                if(i % 5 === 0) await new Promise(r => setTimeout(r, 20));
+            }
+
+            guardarBD(); 
+            renderStock(); 
+            document.getElementById('carga-overlay-global').classList.add('hidden');
+            document.getElementById('carga-overlay-global').style.display = 'none';
+            document.getElementById('input-imagenes-catalogo').value = '';
+            mostrarToast(`Proceso listo: ${vinculadas} fotos vinculadas al stock.`, 'bg-[#10b981]');
+        }
+
+        function comprimirImagenAsincrona(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas'); 
+                        const ctx = canvas.getContext('2d');
+                        let width = img.width; let height = img.height;
+                        
+                        const MAX_SIZE = 320; 
+                        if(width > height) { 
+                            if(width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; } 
+                        } else { 
+                            if(height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; } 
+                        }
+                        
+                        canvas.width = Math.round(width); 
+                        canvas.height = Math.round(height);
+                        ctx.imageSmoothingEnabled = true;
+                        ctx.imageSmoothingQuality = 'medium';
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        
+                        resolve(canvas.toDataURL('image/jpeg', 0.55)); 
+                    };
+                    img.onerror = reject;
+                    img.src = event.target.result;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function exportarCajaExcel() {
+            if(db.caja.length === 0) return mostrarToast('No hay datos en caja para exportar.', 'bg-[#f59e0b]');
+            const fechaSeleccionada = document.getElementById('fecha-caja').value;
+            const filtroDia = confirm(`¿Exportar el Cierre de Caja del día: ${fechaSeleccionada.split('-').reverse().join('/')}?\n\n(Aceptar = Solo este día, Cancelar = Historial completo)`);
+            let datosExportar = db.caja; if(filtroDia) datosExportar = db.caja.filter(m => m.fecha === fechaSeleccionada);
+            if(datosExportar.length === 0) return mostrarToast('No hay datos en el periodo seleccionado.', 'bg-[#f59e0b]');
+            datosExportar.sort((a,b) => a.fecha.localeCompare(b.fecha) || a.hora.localeCompare(b.hora));
+            
+            let dataFormateada = []; let tEfIng = 0, tEfEgr = 0, tMpIng = 0, tMpEgr = 0, tTrIng = 0, tTrEgr = 0;
+            let totalIngresos = 0, totalEgresos = 0;
+            datosExportar.forEach(m => {
+                let ing = (m.tipo === 'venta' || m.tipo === 'ingreso') ? m.monto : 0; 
+                let egr = m.tipo === 'gasto' ? m.monto : 0; 
+                totalIngresos += ing; totalEgresos += egr;
+                if (m.metodo === 'Efectivo') { tEfIng += ing; tEfEgr += egr; } 
+                if (m.metodo === 'Mercado Pago') { tMpIng += ing; tMpEgr += egr; } 
+                if (m.metodo === 'Transferencia') { tTrIng += ing; tTrEgr += egr; }
+                dataFormateada.push({ Fecha: m.fecha, Hora: m.hora, Tipo: m.tipo.toUpperCase(), Medio_de_Pago: m.metodo || 'Efectivo', Concepto: m.concepto, Cliente_Detalle: m.cliente ? m.cliente + (m.detalle ? ' - ' + m.detalle : '') : (m.detalle || '-'), Vendedor: m.vendedor || '-', Ingreso: ing || 0, Egreso: egr || 0 });
+            });
+            dataFormateada.push({ Fecha: "", Hora: "", Tipo: "", Medio_de_Pago: "", Concepto: "TOTALES", Cliente_Detalle: "", Vendedor: "", Ingreso: totalIngresos, Egreso: totalEgresos });
+            dataFormateada.push({ Fecha: "", Hora: "", Tipo: "", Medio_de_Pago: "", Concepto: "SALDO NETO", Cliente_Detalle: "", Vendedor: "", Ingreso: totalIngresos - totalEgresos, Egreso: "" });
+            const ws = XLSX.utils.json_to_sheet(dataFormateada); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Cierre Caja"); XLSX.writeFile(wb, `Cierre_Caja_${filtroDia ? fechaSeleccionada : 'Historico'}.xlsx`); mostrarToast('Excel generado con éxito', 'bg-[#10b981]');
+        }
+
+        function exportarHistorialEntregas() {
+            if(db.entregas.length === 0) return mostrarToast('No hay historial de ventas.', 'bg-[#f59e0b]');
+            let dataFormateada = db.entregas.map(e => { const descItems = e.detalles.map(d => d.texto).join(' | '); return { Remito_Num: "REM-" + e.numero, Fecha: e.fecha, Hora: e.hora, Cliente: e.cliente, Vendedor: e.vendedor, Total: e.monto, Medio_Pago: e.metodoPago, Estado: e.estado, Logistica: e.tipoEntrega || 'Retiro', Direccion: e.direccion || '-', Articulos: descItems }; });
+            const ws = XLSX.utils.json_to_sheet(dataFormateada); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Historial Ventas"); XLSX.writeFile(wb, `Historial_Ventas_${hoyString()}.xlsx`); mostrarToast('Historial descargado', 'bg-[#10b981]');
+        }
+
+        function exportarPreciosExcel() {
+            if(db.productos.length === 0) return mostrarToast('No hay productos para exportar.', 'bg-[#f59e0b]');
+            let dataFormateada = [];
+            const listasOrdenadas = [...db.listasPrecio].sort((a, b) => a.margen - b.margen);
+            
+            db.productos.forEach(p => {
+                let row = { 
+                    "SKU / Código": p.sku || '-', 
+                    "Producto": p.nombre, 
+                    "Costo Base": p.costo 
+                };
+                listasOrdenadas.forEach(l => {
+                    const precio = Math.round(p.costo * (1 + (l.margen / 100)));
+                    row[l.nombre.toUpperCase()] = precio;
+                });
+                dataFormateada.push(row);
+            });
+            
+            const ws = XLSX.utils.json_to_sheet(dataFormateada); 
+            const wb = XLSX.utils.book_new(); 
+            XLSX.utils.book_append_sheet(wb, ws, "Listas de Precios"); 
+            XLSX.writeFile(wb, `Precios_y_Costos_${hoyString()}.xlsx`); 
+            mostrarToast('Excel de precios exportado', 'bg-[#10b981]');
+        }
+
+        function aplicarConfiguracion() {
+            const nombre = db.config.nombreEmpresa || 'Gesto Smart'; 
+            const elNomCom = document.getElementById('nombreComercioSide'); if(elNomCom) elNomCom.value = nombre; 
+            const elConfNom = document.getElementById('conf-empresa-nombre'); if(elConfNom) elConfNom.value = nombre;
+            const elConfWs = document.getElementById('conf-empresa-ws'); if(elConfWs) elConfWs.value = db.config.whatsappTurnos || '';
+            const clientPreview = document.getElementById('clientLogoPreview'); 
+            if(db.config.logoBase64 && clientPreview) { clientPreview.src = db.config.logoBase64; const upOvl = document.getElementById('upload-logo-overlay'); if(upOvl) upOvl.style.opacity = '0'; }
+        }
+        
+        function guardarInfoEmpresa() { 
+            db.config.nombreEmpresa = document.getElementById('conf-empresa-nombre').value.trim() || 'Gesto Smart'; 
+            db.config.whatsappTurnos = document.getElementById('conf-empresa-ws').value.trim() || '';
+            guardarBD(); aplicarConfiguracion(); mostrarToast('Datos actualizados', 'bg-[#10b981]'); 
+        }
+        
+        function procesarLogoSidebar(e) { 
+            const file = e.target.files[0]; if(!file) return; 
+            comprimirImagenAsincrona(file).then(base64 => {
+                db.config.logoBase64 = base64; 
+                guardarBD(); 
+                aplicarConfiguracion(); 
+            });
+        }
+
+        function switchTab(tabId, el) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden')); 
+            document.querySelectorAll('.tab-link').forEach(link => { 
+                link.classList.remove('active', 'text-[#050b14]', 'bg-[#00bfff]', 'shadow-[0_0_10px_rgba(0,191,255,0.3)]', 'font-bold', 'text-white'); 
+                link.classList.add('text-[#8b949e]', 'hover:bg-[#161b22]', 'hover:text-white', 'font-medium'); 
+            });
+            const tg = document.getElementById(tabId);
+            if(tg) tg.classList.remove('hidden');
+            if(el) { 
+                el.classList.remove('text-[#8b949e]', 'hover:bg-[#161b22]', 'hover:text-white', 'font-medium'); 
+                el.classList.add('active', 'text-[#050b14]', 'bg-[#00bfff]', 'shadow-[0_0_10px_rgba(0,191,255,0.3)]', 'font-bold'); 
+            }
+            if(window.innerWidth < 768) {
+                const mobMenu = document.getElementById('mobile-menu');
+                if(mobMenu && mobMenu.parentElement) mobMenu.parentElement.classList.add('hidden'); 
+            }
+            actualizarUI();
+        }
+
+        function actualizarUI() {
+            if(!currentUser) return;
+            try { renderFormVenta(); } catch(e) {} 
+            try { renderStock(); } catch(e) {} 
+            try { renderClientes(); } catch(e) {} 
+            try { renderPresupuestos(); } catch(e) {} 
+            try { renderPrecios(); } catch(e) {}
+            if(currentUser.rol === 'admin' || currentUser.rol === 'cajero') { 
+                try { renderCaja(); } catch(e) {} 
+                try { renderEntregas(); } catch(e) {} 
+            }
+            if(currentUser.rol === 'admin') { 
+                try { renderRentabilidad(); } catch(e) {} 
+                try { renderRRHH(); } catch(e) {} 
+                try { renderEmpleados(); } catch(e) {} 
+            }
+        }
+
+        function cerrarModal(id) { const el = document.getElementById(id); if(el){ el.classList.add('hidden'); el.classList.remove('flex'); } }
+        function abrirModalUI(id) { const el = document.getElementById(id); if(el){ el.classList.remove('hidden'); el.classList.add('flex'); } }
+        
+        function mostrarToast(msg, color = 'bg-[#00bfff]') { 
+            const cont = document.getElementById('toast-container'); const div = document.createElement('div'); div.className = `toast ${color} text-[#050b14]`; div.innerHTML = msg; cont.appendChild(div); 
+            setTimeout(() => { div.style.animation = 'slideIn 0.3s reverse forwards'; setTimeout(()=>div.remove(),300); }, 3000); 
+        }
+        
+        function pedirConfirmacion(mensaje, callback) { document.getElementById('confirm-msg').innerText = mensaje; accionPendiente = callback; abrirModalUI('modal-confirm'); }
+        
+        function vaciarDatosMasivos(modulo) {
+            pedirConfirmacion(`⚠️ ¿Estás seguro de borrar TODOS los datos de ${modulo.toUpperCase()}?`, () => {
+                if(modulo === 'caja') db.caja = []; 
+                if(modulo === 'gastos') db.gastosFijos = []; 
+                if(modulo === 'presupuestos') { db.presupuestos = []; db.config.nextPresupuesto = 1; }
+                if(modulo === 'clientes') db.clientes = []; 
+                if(modulo === 'stock') { db.productos = []; }
+                guardarBD(); actualizarUI(); mostrarToast(`Datos eliminados`, 'bg-[#ef4444]');
+            });
+        }
+
+        function cargarDesplegablesVendedores() {
+            const options = db.empleados.map(e => `<option value="${e.nombre}">${e.nombre}</option>`).join('');
+            const selPos = document.getElementById('pos-vendedor');
+            if(selPos) { 
+                selPos.innerHTML = options; 
+                if (currentUser && currentUser.rol === 'vendedor') { selPos.value = currentUser.nombre; selPos.disabled = true; } 
+                else { selPos.disabled = false; const ultimoVend = localStorage.getItem('ultimo_vendedor'); if(ultimoVend && db.empleados.find(e => e.nombre === ultimoVend)) selPos.value = ultimoVend; } 
+            }
+            const selSueldo = document.getElementById('sueldo-empleado'); if(selSueldo) selSueldo.innerHTML = '<option value="">-- Seleccionar --</option>' + options;
+        }
+
+        function toggleDireccionPOS() {
+            const val = document.getElementById('pos-tipo-entrega').value; const div = document.getElementById('div-pos-direccion');
+            if(val === 'Envío a Domicilio') { div.style.display = 'block'; cargarDirPOS(); } else { div.style.display = 'none'; }
+        }
+
+        function cargarDirPOS() { 
+            const nom = document.getElementById('pos-cliente').value; const c = db.clientes.find(x => x.nombre === nom); 
+            if(c && c.direccion && c.direccion !== '-') { document.getElementById('pos-direccion').value = c.direccion; } else { document.getElementById('pos-direccion').value = ''; } 
+        }
+
+        function renderFormVenta() {
+            const dlProds = document.getElementById('dl-productos-pos'); const listaSel = document.getElementById('pos-lista'); const cliSel = document.getElementById('pos-cliente');
+            if(dlProds) dlProds.innerHTML = db.productos.filter(p => p.cantidad > 0).map(p => `<option value="${p.nombre}">SKU: ${p.sku || '-'} | Stock: ${p.cantidad}</option>`).join('');
+            if(listaSel) { const listasAutorizadas = db.listasPrecio; listaSel.innerHTML = listasAutorizadas.map(l => `<option value="${l.id}">${l.nombre} (+${l.margen}%)</option>`).join(''); }
+            if(cliSel) cliSel.innerHTML = '<option value="">Consumidor Final</option>' + db.clientes.map(c => `<option value="${c.nombre}">${c.nombre}</option>`).join('');
+            renderCarrito();
+        }
+
+        function actualizarPrecioPos() {
+            const pNombre = document.getElementById('pos-producto-nombre').value.trim(); 
+            const lId = document.getElementById('pos-lista').value; 
+            const cant = parseInt(document.getElementById('pos-cantidad').value) || 1;
+            const p = db.productos.find(x => x.nombre.toLowerCase() === pNombre.toLowerCase() || (x.sku && x.sku.toLowerCase() === pNombre.toLowerCase())); 
+            if(!p || !lId) { document.getElementById('pos-total-preview').innerText = '$0'; return; }
+            const l = db.listasPrecio.find(x => x.id === lId); 
+            const precioUnitario = Math.round(p.costo * (1 + (l.margen / 100))); 
+            document.getElementById('pos-total-preview').innerText = '$' + (precioUnitario * cant).toLocaleString('es-AR');
+        }
+
+        function agregarAlCarrito(e) {
+            e.preventDefault();
+            const pNombre = document.getElementById('pos-producto-nombre').value.trim(); 
+            const lId = document.getElementById('pos-lista').value; 
+            const cant = parseInt(document.getElementById('pos-cantidad').value) || 1;
+            const p = db.productos.find(x => x.nombre.toLowerCase() === pNombre.toLowerCase() || (x.sku && x.sku.toLowerCase() === pNombre.toLowerCase())); 
+            if(!p) return mostrarToast('El producto no existe.', 'bg-[#ef4444]');
+            const l = db.listasPrecio.find(x => x.id === lId);
+            
+            const stockActual = Number(p.cantidad) || 0; 
+            const cantEnCarrito = carrito.filter(x => x.pId === p.id).reduce((sum, item) => sum + Number(item.cant), 0);
+            if (Number(cant) + cantEnCarrito > stockActual) { 
+                return mostrarToast(`Stock insuficiente. Solo quedan ${Math.max(0, stockActual - cantEnCarrito)} disponibles.`, 'bg-[#ef4444]'); 
+            }
+            
+            const precioUnitario = Math.round(p.costo * (1 + (l.margen / 100))); 
+            const costoVarPerc = (l.costoVariable || 0) / 100;
+            carrito.push({ id: generarId(), pId: p.id, nombre: p.nombre, sku: p.sku || '', listaNombre: l.nombre, cant: Number(cant), precioUnitario: precioUnitario, costoUnitario: p.costo, costoVarPerc: costoVarPerc });
+            
+            document.getElementById('pos-producto-nombre').value = ''; 
+            document.getElementById('pos-cantidad').value = 1; 
+            renderCarrito(); 
+            actualizarPrecioPos(); 
+            document.getElementById('pos-producto-nombre').focus();
+        }
+
+        function eliminarDelCarrito(id) { carrito = carrito.filter(x => x.id !== id); renderCarrito(); }
+
+        function renderCarrito() {
+            const container = document.getElementById('pos-carrito-container'); const tbody = document.getElementById('pos-carrito-tbody'); const totalPreview = document.getElementById('pos-total-preview');
+            if(!container) return; if(carrito.length === 0) { container.classList.add('hidden'); totalPreview.innerText = '$0'; return; }
+            container.classList.remove('hidden'); let total = 0;
+            tbody.innerHTML = carrito.map(item => { 
+                const subtotal = item.cant * item.precioUnitario; total += subtotal; 
+                return `<tr class="border-b border-[#30363d] hover:bg-[#1e293b]/50"><td class="p-2.5 font-bold text-center text-white">${item.cant}</td><td class="p-2.5 text-white font-bold">${item.nombre}</td><td class="p-2.5 text-xs text-[#8b949e] uppercase">${item.listaNombre}</td><td class="p-2.5 text-right font-bold text-[#10b981]">$${subtotal.toLocaleString('es-AR')}</td><td class="p-2.5 text-center"><button type="button" onclick="eliminarDelCarrito('${item.id}')" class="text-[#ef4444] hover:text-red-400"><i class="fas fa-times"></i></button></td></tr>`; 
+            }).join('');
+            totalPreview.innerText = '$' + total.toLocaleString('es-AR');
+        }
+
+        function guardarPresupuesto() {
+            if(carrito.length === 0) return mostrarToast('El carrito está vacío', 'bg-[#ef4444]');
+            const cli = document.getElementById('pos-cliente').value || 'Consumidor Final'; 
+            const vendedor = document.getElementById('pos-vendedor').value.trim();
+            const tipoEntrega = document.getElementById('pos-tipo-entrega').value;
+            const direccion = tipoEntrega === 'Envío a Domicilio' ? document.getElementById('pos-direccion').value.trim() : 'Retiro en Local';
+            if(!vendedor) return mostrarToast('Ingresá el vendedor para la comisión.', 'bg-[#ef4444]');
+            
+            const btn = document.getElementById('btn-guardar-presupuesto');
+            if(btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Procesando...'; }
+
+            let totalVenta = 0; let totalCosto = 0; let totalCostoVar = 0; let detalles = [];
+            carrito.forEach(item => { 
+                const subtotal = item.precioUnitario * item.cant; 
+                totalVenta += subtotal; 
+                totalCosto += (item.costoUnitario * item.cant); 
+                totalCostoVar += (subtotal * item.costoVarPerc); 
+                detalles.push({ cant: item.cant, nombre: item.nombre, subtotal: subtotal }); 
+            });
+            
+            const fechaStr = hoyString(); const now = new Date(); const horaStr = `${now.getHours().toString().padStart(2,'0')}:${new Date().getMinutes().toString().padStart(2,'0')}`;
+            const numPresStr = String(db.config.nextPresupuesto++).padStart(4, '0');
+            
+            db.presupuestos.push({ id: generarId(), numero: numPresStr, fecha: fechaStr, hora: horaStr, cliente: cli, vendedor: vendedor, tipoEntrega: tipoEntrega, direccion: direccion, totalVenta: totalVenta, totalCosto: totalCosto, totalCostoVar: totalCostoVar, items: JSON.parse(JSON.stringify(carrito)), detallesTexto: detalles.map(d => `${d.cant}x ${d.nombre}`).join(' | ') });
+            
+            localStorage.setItem('ultimo_vendedor', vendedor); carrito = []; guardarBD(); 
+            renderCarrito(); document.getElementById('pos-producto-nombre').value = '';
+            mostrarToast('✅ Enviado a Caja (Presupuesto Creado)', 'bg-[#10b981]');
+            
+            setTimeout(() => {
+                generarPDFPresupuesto(detalles, totalVenta, cli, fechaStr, vendedor, numPresStr, tipoEntrega, direccion);
+                actualizarUI();
+                if(btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-share-square mr-2"></i> Enviar a Caja e Imprimir Presupuesto'; }
+                if (currentUser && currentUser.rol !== 'vendedor') { switchTab('tab-presupuestos', document.querySelector('.tab-link[onclick*="tab-presupuestos"]')); }
+            }, 300);
+        }
+
+        function generarPDFPresupuesto(detalles, total, cliente, fecha, vendedor, numero, tipoEntrega, direccion) {
+            const { jsPDF } = window.jspdf; const doc = new jsPDF(); const nombreEmpresa = db.config.nombreEmpresa || 'Mi Negocio';
+            doc.setFont("helvetica", "bold"); doc.setFontSize(22); doc.setTextColor(0, 191, 255); doc.text(nombreEmpresa, 105, 20, null, null, "center");
+            doc.setFontSize(16); doc.setTextColor(0, 0, 0); doc.text("PRESUPUESTO N° PRES-" + numero, 105, 30, null, null, "center");
+            doc.setFontSize(10); doc.setTextColor(150, 0, 0); doc.text("(DOCUMENTO NO VÁLIDO COMO REMITO NI FACTURA)", 105, 36, null, null, "center");
+            doc.setFontSize(10); doc.setTextColor(0, 0, 0); doc.setFont("helvetica", "normal"); 
+            doc.text(`Fecha: ${fecha}`, 20, 45); doc.text(`Cliente: ${cliente}`, 20, 52); doc.text(`Vendedor: ${vendedor}`, 20, 59); doc.text(`Logística: ${tipoEntrega} | Dir: ${direccion}`, 20, 66); doc.line(20, 72, 190, 72);
+            doc.setFont("helvetica", "bold"); doc.text("CANT.", 20, 79); doc.text("PRODUCTO", 40, 79); doc.text("SUBTOTAL", 160, 79); doc.line(20, 82, 190, 82);
+            doc.setFont("helvetica", "normal"); let y = 92; detalles.forEach(d => { doc.text(String(d.cant), 22, y); doc.text(d.nombre, 40, y); doc.text(`$${d.subtotal.toLocaleString('es-AR')}`, 160, y); y += 10; }); doc.line(20, y, 190, y); y += 10;
+            doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.text("TOTAL PRESUPUESTADO:", 80, y); doc.text(`$${total.toLocaleString('es-AR')}`, 160, y);
+            doc.save(`Presupuesto_PRES-${numero}.pdf`);
+        }
+
+        function renderPresupuestos() {
+            const pPendientes = db.presupuestos; const tbody = document.getElementById('lista-presupuestos-tabla');
+            if(!tbody) return;
+            tbody.innerHTML = pPendientes.length ? pPendientes.map(p => {
+                const btnCobrar = (currentUser && (currentUser.rol === 'admin' || currentUser.rol === 'cajero')) ? `<button onclick="abrirModalCobroPresupuesto('${p.id}')" class="bg-[#10b981] hover:bg-[#059669] text-[#050b14] font-bold px-3 py-1.5 rounded-lg shadow-sm transition ml-2"><i class="fas fa-money-check-alt mr-1"></i> Cobrar</button>` : `<span class="text-[10px] text-[#8b949e] uppercase">Aguardando Caja</span>`;
+                return `<tr class="hover:bg-[#1e293b]/50 border-b border-[#30363d] transition"><td class="py-3 px-4 font-bold text-[#00bfff]">PRES-${p.numero || '0000'} <span class="text-xs text-[#8b949e] block font-normal text-white">${p.fecha} ${p.hora}</span></td><td class="py-3 px-4"><span class="font-bold text-white block">${p.cliente}</span><span class="text-[10px] text-[#8b949e] line-clamp-1">Vend: ${p.vendedor || '-'} | ${p.detallesTexto}</span></td><td class="py-3 px-4 text-right font-bold text-[#10b981] text-base">$${p.totalVenta.toLocaleString('es-AR')}</td><td class="py-3 px-4 text-center">${btnCobrar}</td></tr>`;
+            }).join('') : '<tr><td colspan="4" class="py-10 text-center text-[#8b949e] font-bold">No hay presupuestos pendientes.</td></tr>';
+        }
+
+        function abrirModalCobroPresupuesto(id) { 
+            const p = db.presupuestos.find(x => x.id === id); if(!p) return; 
+            document.getElementById('cobro-presupuesto-id').value = p.id; 
+            document.getElementById('cobro-monto-total').innerText = '$' + p.totalVenta.toLocaleString('es-AR'); 
+            const btnConf = document.getElementById('btn-conf-cobro'); if(btnConf) btnConf.disabled = false; 
+            abrirModalUI('modal-cobro'); 
+        }
+
+        function confirmarCobroPresupuesto() {
+            const btn = document.getElementById('btn-conf-cobro'); if(btn.disabled) return; btn.disabled = true;
+            try {
+                const id = document.getElementById('cobro-presupuesto-id').value; 
+                const metodoPago = document.getElementById('cobro-metodo').value; 
+                const p = db.presupuestos.find(x => x.id === id); 
+                if(!p) { cerrarModal('modal-cobro'); return mostrarToast('Error: Presupuesto no encontrado.', 'bg-[#ef4444]'); }
+                const items = p.items || [];
+                
+                if(items.length > 0 && !p.stockDescontado) { 
+                    for(let item of items) { 
+                        const productoDB = db.productos.find(prod => prod.id === item.pId); 
+                        if(!productoDB || Number(productoDB.cantidad) < Number(item.cant)) { 
+                            cerrarModal('modal-cobro'); return mostrarToast(`Falta stock para ${item.nombre}`, 'bg-[#ef4444]'); 
+                        } 
+                    } 
+                }
+                
+                let detallesRemito = [];
+                items.forEach(item => { 
+                    const productoDB = db.productos.find(prod => prod.id === item.pId); 
+                    if(productoDB && !p.stockDescontado) { 
+                        productoDB.cantidad -= Number(item.cant); 
+                    }
+                    detallesRemito.push({ texto: `${item.cant}x   ${item.nombre}`, subtotal: item.cant * item.precioUnitario }); 
+                });
+                
+                db.productos = db.productos.filter(prod => prod.cantidad > 0);
+
+                if(!db.config.nextRemito) db.config.nextRemito = 1;
+                const numRemitoStr = String(db.config.nextRemito++).padStart(4, '0');
+
+                let rendido = metodoPago !== 'Contraentrega';
+                if(rendido) {
+                    db.caja.push({ id: generarId(), fecha: hoyString(), hora: `${new Date().getHours().toString().padStart(2,'0')}:${new Date().getMinutes().toString().padStart(2,'0')}`, tipo: 'venta', metodo: metodoPago, concepto: 'Venta de mercadería', cliente: p.cliente, detalle: `REM-${numRemitoStr} | ` + (p.detallesTexto || '') + ` (Vend: ${p.vendedor || 'N/A'})`, vendedor: p.vendedor || 'N/A', monto: p.totalVenta, costoAsociado: p.totalCosto || 0, costoVariableAsociado: p.totalCostoVar || 0 });
+                }
+                
+                db.entregas.push({ id: generarId(), numero: numRemitoStr, fecha: hoyString(), hora: `${new Date().getHours().toString().padStart(2,'0')}:${new Date().getMinutes().toString().padStart(2,'0')}`, cliente: p.cliente, vendedor: p.vendedor || 'N/A', metodoPago: metodoPago, monto: p.totalVenta, costo: p.totalCosto || 0, costoVar: p.totalCostoVar || 0, detalles: detallesRemito, items: JSON.parse(JSON.stringify(items)), estado: 'Pendiente', tipoEntrega: p.tipoEntrega || 'Retiro', direccion: p.direccion || '', impreso: false, rendido: rendido });
+                
+                db.presupuestos = db.presupuestos.filter(x => x.id !== id); 
+                guardarBD(); cerrarModal('modal-cobro'); actualizarUI();
+                
+                const cDB = db.clientes.find(x => x.nombre === p.cliente);
+                let telCli = cDB ? cDB.tel : '-';
+                if(p.cliente && p.cliente.includes('Tel:')) {
+                    const match = p.cliente.match(/Tel:\s*([\d\s]+)/);
+                    if(match) telCli = match[1].trim();
+                }
+
+                imprimirRemito(detallesRemito, p.totalVenta, p.cliente, telCli, metodoPago, hoyString(), `${new Date().getHours().toString().padStart(2,'0')}:${new Date().getMinutes().toString().padStart(2,'0')}`, p.vendedor, numRemitoStr, p.tipoEntrega || 'Retiro', p.direccion || '');
+                mostrarToast('Cobro procesado e Imprimiendo Remito...', 'bg-[#10b981]');
+            } catch(e) { console.error(e); mostrarToast('Error interno: ' + e.message, 'bg-[#ef4444]'); }
+        }
+
+        function guardarMovimiento(tipoGasto) {
+            const det = document.getElementById('mov-detalle').value.trim(); const met = document.getElementById('mov-metodo').value; const mon = parseFloat(document.getElementById('mov-monto').value);
+            if(!det || isNaN(mon) || mon <= 0) return mostrarToast('Ingresá detalle y monto válido', 'bg-[#ef4444]');
+            db.caja.push({ id: generarId(), fecha: document.getElementById('fecha-caja').value || hoyString(), hora: `${new Date().getHours().toString().padStart(2,'0')}:${new Date().getMinutes().toString().padStart(2,'0')}`, tipo: tipoGasto, metodo: met, concepto: det, monto: mon, vendedor: 'N/A' });
+            document.getElementById('mov-detalle').value = ''; document.getElementById('mov-monto').value = ''; guardarBD(); actualizarUI(); mostrarToast('Movimiento guardado', 'bg-[#10b981]');
+        }
+        function borrarMovimiento(id) { pedirConfirmacion('¿Borrar este movimiento de caja?', () => { db.caja = db.caja.filter(m => m.id !== id); guardarBD(); actualizarUI(); }); }
+        
+        function renderCaja() {
+            if(!currentUser || currentUser.rol === 'vendedor') return;
+            const fechaSelect = document.getElementById('fecha-caja'); if(!fechaSelect) return; const fecha = fechaSelect.value; const movimientosDia = db.caja.filter(m => m.fecha === fecha);
+            let totEf = 0, totMP = 0, totTr = 0, totIngresos = 0, totEgresos = 0; const tbody = document.getElementById('lista-caja-tabla');
+            if(tbody) {
+                tbody.innerHTML = movimientosDia.length ? movimientosDia.map(m => {
+                    const monto = parseFloat(m.monto) || 0; const esIng = (m.tipo === 'venta' || m.tipo === 'ingreso');
+                    if(esIng) { totIngresos += monto; if(m.metodo === 'Efectivo') totEf += monto; if(m.metodo === 'Mercado Pago') totMP += monto; if(m.metodo === 'Transferencia') totTr += monto; } 
+                    else { totEgresos += monto; if(m.metodo === 'Efectivo') totEf -= monto; if(m.metodo === 'Mercado Pago') totMP -= monto; if(m.metodo === 'Transferencia') totTr -= monto; }
+                    const color = esIng ? 'text-[#10b981]' : 'text-[#ef4444]'; const bg = esIng ? 'bg-[#10b981]/10 text-[#10b981] border border-[#10b981]/30' : 'bg-[#ef4444]/10 text-[#ef4444] border border-[#ef4444]/30'; const sig = esIng ? '+' : '-'; const venBadge = esIng && m.vendedor && m.vendedor !== 'Sin Vendedor' && m.vendedor !== 'N/A' ? `<span class="bg-[#1e293b] text-[#c9d1d9] px-2 py-1 rounded text-[10px] ml-2 border border-[#30363d]"><i class="fas fa-user-tag text-[#10b981] mr-1"></i>${m.vendedor}</span>` : '';
+                    return `<tr class="hover:bg-[#1e293b]/50 transition border-b border-[#30363d]"><td class="py-3 px-4 font-bold text-[#8b949e] text-xs">${m.hora || '-'}</td><td class="py-3 px-4"><span class="${bg} px-2 py-1 rounded text-[10px] font-bold uppercase">${m.tipo}</span></td><td class="py-3 px-4 text-sm"><span class="font-bold text-white">${m.concepto}</span> ${venBadge}<span class="block text-xs text-[#8b949e] line-clamp-1 mt-1">${m.detalle || ''}</span></td><td class="py-3 px-4 font-bold text-white text-xs"><i class="fas fa-wallet text-[#8b949e] mr-1"></i> ${m.metodo}</td><td class="py-3 px-4 text-right font-bold ${color}">${sig}$${monto.toLocaleString('es-AR')}</td><td class="py-3 px-4 text-center"><button onclick="borrarMovimiento('${m.id}')" class="text-[#ef4444] hover:text-red-400 bg-[#0d1117] border border-[#30363d] p-2 rounded-lg mx-1"><i class="fas fa-trash"></i></button></td></tr>`;
+                }).join('') : '<tr><td colspan="6" class="py-10 text-center text-[#8b949e] font-bold">No hay movimientos para esta fecha.</td></tr>';
+            }
+            if(document.getElementById('caja-tot-efectivo')) document.getElementById('caja-tot-efectivo').innerText = '$ ' + totEf.toLocaleString('es-AR'); 
+            if(document.getElementById('caja-tot-mp')) document.getElementById('caja-tot-mp').innerText = '$ ' + totMP.toLocaleString('es-AR'); 
+            if(document.getElementById('caja-tot-transf')) document.getElementById('caja-tot-transf').innerText = '$ ' + totTr.toLocaleString('es-AR'); 
+            if(document.getElementById('caja-tot-global')) document.getElementById('caja-tot-global').innerText = '$ ' + totIngresos.toLocaleString('es-AR'); 
+            if(document.getElementById('caja-tot-egresos')) document.getElementById('caja-tot-egresos').innerText = 'Gastos del día: $' + totEgresos.toLocaleString('es-AR');
+        }
+
+        function renderEntregas() {
+            if(!currentUser || currentUser.rol === 'vendedor') return;
+            const fecha = document.getElementById('fecha-deposito').value; const entregasDia = db.entregas.filter(e => e.fecha === fecha).reverse(); const tbody = document.getElementById('lista-entregas-tabla'); if(!tbody) return;
+            tbody.innerHTML = entregasDia.length ? entregasDia.map(e => {
+                const isEnvio = e.tipoEntrega === 'Envío a Domicilio'; 
+                const bloqueado = e.estado === 'Entregado' || e.estado === 'Anulado';
+                const colorEstado = e.estado === 'Entregado' ? 'text-[#10b981]' : (e.estado === 'Anulado' ? 'text-[#ef4444]' : (e.estado === 'En Camino' ? 'text-[#00bfff]' : 'text-[#f59e0b]'));
+                const options = ['Pendiente', 'En Camino', 'Entregado', 'Anulado'].map(opt => `<option value="${opt}" ${e.estado === opt ? 'selected' : ''}>${opt}</option>`).join('');
+                const selectEstado = `<select onchange="cambiarEstadoEntrega('${e.id}', this.value)" class="bg-[#0d1117] border border-[#30363d] ${colorEstado} font-bold text-xs p-1.5 rounded outline-none focus:border-[#00bfff] w-full" ${bloqueado ? 'disabled' : ''}>${options}</select>`;
+                
+                const textoDetalles = e.detalles.map(d => d.texto).join(' <br> ');
+                
+                let btnPrint = '';
+                if(e.estado === 'Anulado') {
+                    btnPrint = `<button onclick="imprimirNC('${e.id}')" class="bg-[#1e293b] text-[#ef4444] border border-[#ef4444]/50 hover:bg-[#ef4444]/10 font-bold px-2 py-1.5 rounded shadow-sm text-[10px] w-full uppercase tracking-widest transition"><i class="fas fa-print mr-1"></i> Imprimir N.C.</button>`;
+                } else if(e.impreso || e.estado === 'Entregado') {
+                    btnPrint = `<button disabled class="bg-[#1e293b] text-[#8b949e] border border-[#334155] font-bold px-2 py-1.5 rounded shadow-sm text-[10px] w-full cursor-not-allowed uppercase tracking-widest"><i class="fas fa-lock mr-1"></i> Impreso</button>`;
+                } else {
+                    btnPrint = `<button onclick="generarRemitoEntrega('${e.id}')" class="bg-[#00bfff] hover:bg-[#4dd2ff] text-[#050b14] font-bold px-2 py-1.5 rounded shadow-sm transition text-[10px] flex items-center justify-center w-full uppercase tracking-widest"><i class="fas fa-print mr-1"></i> Imprimir</button>`;
+                }
+                
+                let accionesAdicionales = '';
+                if(e.metodoPago === 'Contraentrega' && !e.rendido && e.estado !== 'Anulado') {
+                    accionesAdicionales += `<button onclick="abrirModalRendicion('${e.id}')" class="bg-[#10b981] hover:bg-[#059669] text-[#050b14] font-bold px-2 py-1.5 rounded shadow-sm text-[10px] w-full mt-2 transition uppercase tracking-widest"><i class="fas fa-hand-holding-usd mr-1"></i> Rendir Caja</button>`;
+                }
+                if(e.estado !== 'Anulado') {
+                    accionesAdicionales += `<button onclick="abrirModalNC('${e.id}')" class="bg-[#0d1117] hover:bg-[#ef4444]/20 border border-[#ef4444]/50 text-[#ef4444] font-bold px-2 py-1.5 rounded shadow-sm text-[10px] w-full mt-2 transition uppercase tracking-widest"><i class="fas fa-undo mr-1"></i> Nota Crédito</button>`;
+                }
+
+                return `<tr class="hover:bg-[#1e293b]/50 transition border-b border-[#30363d] ${bloqueado ? 'opacity-70' : ''}"><td class="py-4 px-4 font-bold text-[#00bfff]">REM-${e.numero || '0000'} <span class="text-xs text-[#8b949e] block font-normal text-white">${e.hora}</span></td><td class="py-4 px-4 font-bold text-white">${e.cliente}<br><span class="text-[10px] text-[#8b949e] font-normal">Vend: ${e.vendedor || '-'}</span></td><td class="py-4 px-4 text-xs font-mono text-[#c9d1d9]">${textoDetalles}<div class="mt-2 text-[10px] ${isEnvio ? 'text-[#00bfff] bg-[#00bfff]/10' : 'text-[#f59e0b] bg-[#f59e0b]/10'} p-1 rounded inline-block"><i class="fas ${isEnvio ? 'fa-truck' : 'fa-store'} mr-1"></i> ${e.tipoEntrega || 'Retiro'}: ${e.direccion || ''}</div></td><td class="py-4 px-4 text-center">${selectEstado}</td><td class="py-4 px-4"><div class="flex flex-col">${btnPrint}${accionesAdicionales}</div></td></tr>`;
+            }).join('') : '<tr><td colspan="5" class="py-10 text-center text-[#8b949e] font-bold">No hay entregas registradas para esta fecha.</td></tr>';
+        }
+
+        function cambiarEstadoEntrega(id, estado) { const e = db.entregas.find(x => x.id === id); if(e) { e.estado = estado; guardarBD(); renderEntregas(); mostrarToast('Estado actualizado', 'bg-[#10b981]'); } }
+
+        function abrirModalRendicion(id) { document.getElementById('rendir-id').value = id; abrirModalUI('modal-rendicion'); }
+        function confirmarRendicion() {
+            const id = document.getElementById('rendir-id').value; const e = db.entregas.find(x => x.id === id); if(!e) return;
+            const btn = document.getElementById('btn-conf-rendicion'); if(btn.disabled) return; btn.disabled = true;
+            const metodoReal = document.getElementById('rendir-metodo-real').value;
+            e.rendido = true; e.metodoPago = metodoReal;
+            db.caja.push({ 
+                id: generarId(), fecha: hoyString(), hora: `${new Date().getHours().toString().padStart(2,'0')}:${new Date().getMinutes().toString().padStart(2,'0')}`, 
+                tipo: 'ingreso', metodo: metodoReal, concepto: 'Rendición Contraentrega', cliente: e.cliente, detalle: `REM-${e.numero}`, vendedor: e.vendedor, monto: e.monto,
+                costoAsociado: e.costo || 0, costoVariableAsociado: e.costoVar || 0
+            });
+            guardarBD(); cerrarModal('modal-rendicion'); actualizarUI(); mostrarToast('Rendición exitosa. Dinero en caja.', 'bg-[#10b981]');
+            btn.disabled = false;
+        }
+
+        function abrirModalNC(id) { document.getElementById('nc-id').value = id; abrirModalUI('modal-nc'); }
+        
+        function imprimirNC(id) {
+            const e = db.entregas.find(x => x.id === id); if(!e) return;
+            const { jsPDF } = window.jspdf; const doc = new jsPDF(); const nombreEmpresa = db.config.nombreEmpresa || 'Mi Negocio';
+            doc.setFont("helvetica", "bold"); doc.setFontSize(22); doc.setTextColor(239, 68, 68); doc.text(nombreEmpresa, 105, 20, null, null, "center");
+            doc.setFontSize(16); doc.setTextColor(0, 0, 0); doc.text("NOTA DE CRÉDITO NC-" + e.numero, 105, 30, null, null, "center");
+            doc.setFontSize(10); doc.setTextColor(150, 0, 0); doc.text("(ANULA TOTALMENTE EL REMITO REM-" + e.numero + ")", 105, 36, null, null, "center");
+            
+            doc.setFontSize(10); doc.setTextColor(0,0,0); doc.setFont("helvetica", "normal"); 
+            doc.text(`Fecha Emisión N.C.: ${hoyString()}`, 20, 45); 
+            doc.text(`Cliente: ${e.cliente}`, 20, 52); 
+            doc.text(`Vendedor Original: ${e.vendedor || 'N/A'}`, 20, 59); 
+            doc.line(20, 65, 190, 65);
+            
+            doc.setFont("helvetica", "bold"); doc.text("MERCADERÍA DEVUELTA / ANULADA", 20, 72); doc.line(20, 75, 190, 75);
+            doc.setFont("helvetica", "normal"); 
+            let y = 85; 
+            e.detalles.forEach(d => { 
+                const textLines = doc.splitTextToSize(d.texto, 170);
+                doc.text(textLines, 20, y); 
+                y += (textLines.length * 6); 
+            }); 
+            doc.line(20, y, 190, y); y += 10;
+            doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.text(`MONTO ACREDITADO: $${e.monto.toLocaleString('es-AR')}`, 105, y, null, null, "center");
+            doc.save(`Nota_Credito_NC-${e.numero}.pdf`);
+        }
+
+        function confirmarNC() {
+            const id = document.getElementById('nc-id').value; const e = db.entregas.find(x => x.id === id); if(!e) return;
+            const btn = document.getElementById('btn-conf-nc'); if(btn.disabled) return; btn.disabled = true;
+            const motivo = document.getElementById('nc-motivo').value;
+
+            if(e.rendido) {
+                db.caja.push({ id: generarId(), fecha: hoyString(), hora: `${new Date().getHours().toString().padStart(2,'0')}:${new Date().getMinutes().toString().padStart(2,'0')}`, tipo: 'gasto', metodo: 'Efectivo', concepto: 'Nota de Crédito', cliente: e.cliente, detalle: `Anulación REM-${e.numero}`, vendedor: e.vendedor, monto: e.monto });
+            }
+            if(motivo === 'arrepentimiento' && e.items) {
+                e.items.forEach(item => { const p = db.productos.find(prod => prod.id === item.pId); if(p) p.cantidad += Number(item.cant); });
+            }
+            e.estado = 'Anulado';
+            guardarBD(); cerrarModal('modal-nc'); actualizarUI(); 
+            mostrarToast('Remito anulado y procesado.', 'bg-[#10b981]');
+            
+            setTimeout(() => { imprimirNC(e.id); }, 500);
+            btn.disabled = false;
+        }
+
+        function generarRemitoEntrega(id) { 
+            const e = db.entregas.find(x => x.id === id); if(!e) return; 
+            if(e.impreso || e.estado === 'Entregado' || e.estado === 'Anulado') return mostrarToast('El remito ya fue impreso, entregado o está anulado.', 'bg-[#f59e0b]'); 
+            
+            const cDB = db.clientes.find(x => x.nombre === e.cliente);
+            const telCli = cDB ? cDB.tel : '-';
+
+            imprimirRemito(e.detalles, e.monto, e.cliente, telCli, e.metodoPago, e.fecha, e.hora, e.vendedor || 'N/A', e.numero, e.tipoEntrega || 'Retiro', e.direccion || ''); 
+            e.impreso = true; if(e.estado === 'Pendiente') e.estado = 'Entregado'; guardarBD(); renderEntregas(); 
+        }
+
+        function imprimirRemito(detalles, total, cliente, telefono, metodo, fecha, hora, vendedor, numero, tipoEntrega, direccion) {
+            const { jsPDF } = window.jspdf; const doc = new jsPDF(); const nombreEmpresa = db.config.nombreEmpresa || 'Mi Negocio';
+            doc.setFont("helvetica", "bold"); doc.setFontSize(22); doc.setTextColor(0, 191, 255); doc.text(nombreEmpresa, 105, 20, null, null, "center");
+            doc.setFontSize(16); doc.setTextColor(0, 0, 0); doc.text("REMITO N° REM-" + numero, 105, 30, null, null, "center");
+            doc.setFontSize(10); doc.setTextColor(16, 185, 129); doc.text("(COMPROBANTE OFICIAL DE PAGO Y ENTREGA)", 105, 36, null, null, "center");
+            doc.setFontSize(10); doc.setTextColor(0,0,0); doc.setFont("helvetica", "normal"); 
+            doc.text(`Fecha: ${fecha}  Hora: ${hora}`, 20, 45); 
+            doc.text(`Cliente: ${cliente}`, 20, 52); 
+            doc.text(`Teléfono: ${telefono}`, 130, 52);
+            doc.text(`Medio de Pago: ${metodo}`, 20, 59); 
+            doc.text(`Vendedor: ${vendedor}`, 20, 66); 
+            doc.text(`Logística: ${tipoEntrega} | Dir: ${direccion}`, 20, 73); 
+            doc.line(20, 79, 190, 79);
+            
+            doc.setFont("helvetica", "bold"); doc.text("CANT.   PRODUCTO", 20, 86); doc.line(20, 89, 190, 89);
+            doc.setFont("helvetica", "normal"); 
+            let y = 99; 
+            detalles.forEach(d => { 
+                const textLines = doc.splitTextToSize(d.texto, 170);
+                doc.text(textLines, 20, y); 
+                y += (textLines.length * 6); 
+            }); 
+            doc.line(20, y, 190, y); y += 10;
+
+            if(metodo === 'Contraentrega') {
+                doc.setFont("helvetica", "bold"); doc.setFontSize(16); doc.setTextColor(239, 68, 68);
+                doc.text(`TOTAL A COBRAR EN DOMICILIO: $${total.toLocaleString('es-AR')}`, 105, y, null, null, "center");
+                doc.setTextColor(0, 0, 0);
+            } else {
+                doc.setFont("helvetica", "bold"); doc.setFontSize(14);
+                doc.text(`TOTAL DEL PEDIDO: $${total.toLocaleString('es-AR')} (PAGADO)`, 105, y, null, null, "center");
+            }
+            y += 20;
+
+            doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.text("MERCADERÍA ENTREGADA Y CONTROLADA", 105, y, null, null, "center"); y += 20; doc.setFontSize(10); doc.setFont("helvetica", "normal"); doc.text("Firma de Conformidad: ___________________________", 20, y);
+            doc.save(`Remito_REM-${numero}.pdf`);
+        }
+
+        function renderTiendaWeb() {
+            const elSearch = document.getElementById('buscador-tienda');
+            const search = elSearch ? elSearch.value.toLowerCase() : '';
+            
+            let filtrados = db.productos.filter(p => p.cantidad > 0);
+            if(search) {
+                filtrados = filtrados.filter(p => p.nombre.toLowerCase().includes(search) || (p.sku && p.sku.toLowerCase().includes(search)));
+            }
+            
+            const grid = document.getElementById('grid-productos-tienda');
+            if(!grid) return;
+            
+            const listaPublica = db.listasPrecio[0]; 
+            
+            grid.innerHTML = filtrados.length ? filtrados.map(p => {
+                const precio = Math.round(listaPublica ? (p.costo * (1 + (listaPublica.margen / 100))) : p.costo);
+                const imgSrc = p.imagenBase64 || 'https://via.placeholder.com/300/1e293b/8b949e?text=Sin+Imagen';
+                return `
+                <div class="product-card">
+                    <img src="${imgSrc}" class="product-image" loading="lazy">
+                    <div class="p-4 flex flex-col flex-grow">
+                        <span class="text-[10px] text-[#00bfff] font-bold uppercase mb-1">SKU: ${p.sku || 'N/A'}</span>
+                        <h4 class="text-sm font-bold text-white mb-2 line-clamp-2">${p.nombre}</h4>
+                        <span class="text-[10px] text-[#8b949e] mb-2 font-bold">Disponibles: <strong class="text-white">${p.cantidad}</strong></span>
+                        <div class="mt-auto flex justify-between items-end">
+                            <span class="text-lg font-black text-[#10b981]">$${precio.toLocaleString('es-AR')}</span>
+                            <button onclick="agregarAlCarritoWeb('${p.id}', ${precio})" class="bg-[#00bfff] hover:bg-[#4dd2ff] text-[#050b14] w-10 h-10 rounded-full shadow-[0_0_10px_rgba(0,191,255,0.4)] transition flex items-center justify-center"><i class="fas fa-cart-plus"></i></button>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('') : '<div class="col-span-full py-16 text-center text-[#8b949e] font-bold"><i class="fas fa-box-open text-4xl mb-3 block"></i> No hay artículos con stock disponibles en este momento.</div>';
+        }
+
+        function agregarAlCarritoWeb(id, precio) {
+            const prod = db.productos.find(x => x.id === id); if(!prod) return;
+            const exist = carritoWeb.find(x => x.id === id);
+            if(exist) { 
+                if(exist.cant < prod.cantidad) exist.cant++; 
+                else mostrarToast('Stock máximo alcanzado', 'bg-[#f59e0b]'); 
+            } else { 
+                carritoWeb.push({ id: prod.id, sku: prod.sku, nombre: prod.nombre, cant: 1, precio: precio, costoUnitario: prod.costo }); 
+            }
+            actualizarBadgeCarrito(); mostrarToast('Agregado al carrito', 'bg-[#10b981]');
+        }
+        
+        function actualizarBadgeCarrito() { 
+            const badge = document.getElementById('cart-badge'); const tot = carritoWeb.reduce((sum, i) => sum + i.cant, 0);
+            if(tot > 0) { badge.innerText = tot; badge.classList.remove('hidden'); } else { badge.classList.add('hidden'); }
+        }
+        
+        function abrirCarritoWeb() {
+            const list = document.getElementById('lista-carrito-web'); let html = ''; let total = 0;
+            if(carritoWeb.length === 0) { html = '<p class="text-center text-[#8b949e] font-bold py-10">Tu carrito está vacío.</p>'; } 
+            else {
+                html = carritoWeb.map((item, index) => {
+                    const sub = item.cant * item.precio; total += sub;
+                    return `<div class="flex justify-between items-center bg-[#0d1117] p-3 rounded-xl border border-[#30363d]"><div class="flex-grow"><h4 class="text-sm font-bold text-white line-clamp-1">${item.nombre}</h4><span class="text-xs text-[#8b949e] block mt-1">${item.cant}x $${item.precio.toLocaleString('es-AR')} = <strong class="text-[#00bfff]">$${sub.toLocaleString('es-AR')}</strong></span></div><div class="flex items-center gap-2"><button onclick="modificarCantWeb(${index}, -1)" class="bg-[#1e293b] text-white w-8 h-8 rounded-lg font-bold hover:bg-[#30363d]">-</button><span class="font-bold text-white px-1 text-sm">${item.cant}</span><button onclick="modificarCantWeb(${index}, 1)" class="bg-[#1e293b] text-white w-8 h-8 rounded-lg font-bold hover:bg-[#30363d]">+</button></div></div>`;
+                }).join('');
+            }
+            document.getElementById('total-carrito-web').innerText = '$' + total.toLocaleString('es-AR');
+            list.innerHTML = html; abrirModalUI('modal-carrito-web');
+        }
+        
+        function modificarCantWeb(index, delta) {
+            const item = carritoWeb[index]; const prod = db.productos.find(x => x.id === item.id);
+            item.cant += delta;
+            if(item.cant > prod.cantidad) { item.cant = prod.cantidad; mostrarToast('Stock máximo alcanzado', 'bg-[#f59e0b]'); }
+            if(item.cant <= 0) { carritoWeb.splice(index, 1); }
+            actualizarBadgeCarrito(); abrirCarritoWeb();
+        }
+
+        function finalizarCompraWebYDescontarStock() {
+            if(carritoWeb.length === 0) return mostrarToast('El carrito está vacío', 'bg-[#ef4444]');
+            const nombreCli = document.getElementById('web-cli-nombre').value.trim() || 'Cliente Web';
+            const telCli = document.getElementById('web-cli-tel').value.trim() || '-';
+            const dirCli = document.getElementById('web-cli-dir').value.trim() || 'Retiro en Local';
+
+            if (nombreCli !== 'Cliente Web') {
+                let clienteExistente = db.clientes.find(c => c.nombre.toLowerCase() === nombreCli.toLowerCase() || (c.tel !== '-' && c.tel === telCli));
+                if (!clienteExistente) {
+                    db.clientes.push({ id: generarId(), nombre: nombreCli, tel: telCli, direccion: dirCli, tipo: 'Minorista' });
+                } else {
+                    if(clienteExistente.tel === '-' && telCli !== '-') clienteExistente.tel = telCli;
+                    if((clienteExistente.direccion === '-' || !clienteExistente.direccion) && dirCli !== 'Retiro en Local') clienteExistente.direccion = dirCli;
+                }
+            }
+
+            for(let item of carritoWeb) {
+                const prod = db.productos.find(p => p.id === item.id);
+                if(!prod || prod.cantidad < item.cant) {
+                    return mostrarToast(`No hay suficiente stock de "${item.nombre}".`, 'bg-[#ef4444]');
+                }
+            }
+
+            let totalVenta = 0; let totalCosto = 0; let detalles = [];
+            carritoWeb.forEach(item => {
+                const prod = db.productos.find(p => p.id === item.id);
+                if(prod) { prod.cantidad -= item.cant; }
+                const sub = item.cant * item.precio;
+                totalVenta += sub;
+                totalCosto += (item.costoUnitario * item.cant);
+                detalles.push({ cant: item.cant, nombre: item.nombre, subtotal: sub, sku: item.sku || '' });
+            });
+
+            db.productos = db.productos.filter(p => p.cantidad > 0);
+
+            if(!db.config.nextPresupuesto) db.config.nextPresupuesto = 1;
+            const numPresStr = String(db.config.nextPresupuesto++).padStart(4, '0');
+            const fechaStr = hoyString(); 
+            const now = new Date(); 
+            const horaStr = `${now.getHours().toString().padStart(2,'0')}:${new Date().getMinutes().toString().padStart(2,'0')}`;
+            
+            db.presupuestos.push({
+                id: generarId(), numero: numPresStr, fecha: fechaStr, hora: horaStr, cliente: `${nombreCli} (Web - Tel: ${telCli})`, vendedor: 'Tienda Web',
+                tipoEntrega: dirCli.toLowerCase().includes('retiro') ? 'Retiro en Local' : 'Envío a Domicilio', direccion: dirCli,
+                totalVenta: totalVenta, totalCosto: totalCosto, totalCostoVar: 0, stockDescontado: true,
+                items: JSON.parse(JSON.stringify(carritoWeb.map(c => ({ id: generarId(), pId: c.id, nombre: c.nombre, listaNombre: 'Web', cant: c.cant, precioUnitario: c.precio, costoUnitario: c.costoUnitario, costoVarPerc: 0 })))),
+                detallesTexto: detalles.map(d => `${d.cant}x ${d.nombre}`).join(' | ')
+            });
+
+            let text = `Hola *${db.config.nombreEmpresa}*! 👋%0AConfirmé mi pedido web *PRES-${numPresStr}*:%0A%0A`;
+            detalles.forEach(item => { text += `▪ *${item.cant}x* ${item.nombre} - $${item.subtotal.toLocaleString('es-AR')}%0A`; });
+            text += `%0A*TOTAL: $${totalVenta.toLocaleString('es-AR')}*%0A`;
+            text += `*Cliente:* ${nombreCli}%0A*Tel:* ${telCli}%0A*Entrega:* ${dirCli}%0A%0A¡Muchas gracias!`;
+
+            guardarBD(); carritoWeb = []; actualizarBadgeCarrito(); cerrarModal('modal-carrito-web'); renderTiendaWeb(); actualizarUI();
+            mostrarToast(`¡Pedido confirmado! Stock descontado con éxito`, 'bg-[#10b981]');
+
+            const phone = db.config.whatsappTurnos || '';
+            if(phone) { setTimeout(() => { window.open(`https://wa.me/${phone}?text=${text}`, '_blank'); }, 500); }
+        }
+
+        async function generarPDFCatalogo() {
+            if(db.productos.length === 0) return mostrarToast('No hay productos para exportar.', 'bg-[#f59e0b]');
+            const btn = document.querySelector('button[onclick="generarPDFCatalogo()"]');
+            if(btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Generando...'; }
+            
+            const { jsPDF } = window.jspdf; 
+            const doc = new jsPDF(); 
+            const listaPublica = db.listasPrecio[0]; 
+            const filtrados = db.productos.filter(p => p.cantidad > 0);
+            
+            doc.setFillColor(245, 245, 245); doc.rect(0, 0, 210, 297, 'F');
+            doc.setFont("helvetica", "bold"); doc.setFontSize(22); doc.setTextColor(0, 191, 255);
+            doc.text(db.config.nombreEmpresa + " - Catálogo", 105, 18, null, null, "center");
+            doc.setFontSize(10); doc.setTextColor(100, 100, 100); doc.text(`Stock actualizado al: ${hoyString()}`, 105, 24, null, null, "center");
+            
+            let x = 15; let y = 35; const cardWidth = 55; const cardHeight = 75;
+
+            const cargarImagen = (src) => {
+                return new Promise((resolve, reject) => {
+                    const img = new Image(); img.onload = () => resolve(img); img.onerror = () => reject(new Error('Img error')); img.src = src;
+                });
+            };
+
+            for (let i = 0; i < filtrados.length; i++) {
+                const p = filtrados[i];
+                if (x > 150) { x = 15; y += (cardHeight + 10); }
+                if (y + cardHeight > 280) { doc.addPage(); doc.setFillColor(245, 245, 245); doc.rect(0, 0, 210, 297, 'F'); y = 20; x = 15; }
+                
+                doc.setFillColor(255, 255, 255); doc.setDrawColor(220, 220, 220); doc.roundedRect(x, y, cardWidth, cardHeight, 3, 3, 'FD');
+
+                if(p.imagenBase64) { 
+                    try { 
+                        const imgElem = await cargarImagen(p.imagenBase64); const imgRatio = imgElem.width / imgElem.height;
+                        const boxSize = 45; let drawW = boxSize; let drawH = boxSize;
+                        if (imgRatio > 1) { drawH = boxSize / imgRatio; } else { drawW = boxSize * imgRatio; }
+                        const offsetX = x + 5 + ((boxSize - drawW) / 2); const offsetY = y + 5 + ((boxSize - drawH) / 2);
+                        doc.addImage(p.imagenBase64, 'JPEG', offsetX, offsetY, drawW, drawH); 
+                    } catch(e) { doc.setDrawColor(200); doc.rect(x + 5, y + 5, 45, 45); doc.text("Sin Foto", x + 15, y + 30); } 
+                } else { 
+                    doc.setFillColor(240, 240, 240); doc.rect(x + 5, y + 5, 45, 45, 'F'); doc.setTextColor(150, 150, 150); doc.setFontSize(8); doc.text("Sin Imagen", x + 20, y + 28); 
+                }
+                
+                doc.setFontSize(7); doc.setTextColor(100, 100, 100); doc.setFont("helvetica", "bold"); doc.text(`SKU: ${p.sku||'-'}`, x + 5, y + 55);
+                doc.setFontSize(8); doc.setTextColor(30, 30, 30); doc.setFont("helvetica", "normal");
+                const splitName = doc.splitTextToSize(p.nombre, cardWidth - 10); doc.text(splitName, x + 5, y + 60);
+                
+                const precio = Math.round(listaPublica ? (p.costo * (1 + (listaPublica.margen / 100))) : p.costo);
+                doc.setFontSize(11); doc.setTextColor(16, 185, 129); doc.setFont("helvetica", "bold"); doc.text(`$${precio.toLocaleString('es-AR')}`, x + 5, y + 71);
+                x += (cardWidth + 8);
+            }
+            
+            doc.save(`Catalogo_${db.config.nombreEmpresa.replace(/\s+/g, '_')}.pdf`);
+            if(btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-pdf mr-2"></i> Descargar PDF'; }
         }
 
         function toggleFiltroSinFotos() {
