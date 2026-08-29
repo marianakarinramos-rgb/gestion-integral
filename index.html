@@ -397,7 +397,7 @@
                         </table>
                     </div>
                 </div>
-                <!-- TAB: CATÁLOGO Y STOCK -->
+<!-- TAB: CATÁLOGO Y STOCK -->
                 <div id="tab-catalogo" class="tab-content hidden fade-in">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4">
                         <div>
@@ -709,7 +709,7 @@
                                 <div class="flex flex-col gap-2">
                                     <input type="text" id="gf-concepto" placeholder="Concepto (Ej: Alquiler)" class="w-full border border-[#30363d] bg-[#0d1117] rounded-lg outline-none text-sm px-3 py-2 text-white font-bold focus:border-[#00bfff]" onkeypress="if(event.key === 'Enter') guardarGastoFijo()">
                                     <div class="flex gap-2">
-                                        <input type="number" id="gf-monto" placeholder="Monto $" class="w-full border border-[#30363d] bg-[#0d1117] rounded-lg outline-none text-sm font-bold text-white focus:border-[#00bfff]" onkeypress="if(event.key === 'Enter') guardarGastoFijo()">
+                                        <input type="number" id="gf-monto" placeholder="Monto $" class="w-full border border-[#30363d] bg-[#0d1117] rounded-lg outline-none text-sm px-3 py-2 font-bold text-white focus:border-[#00bfff]" onkeypress="if(event.key === 'Enter') guardarGastoFijo()">
                                         <button onclick="guardarGastoFijo()" class="bg-[#00bfff] text-[#050b14] px-4 py-2 rounded-lg font-bold hover:bg-[#4dd2ff] transition flex-shrink-0 shadow-[0_0_10px_rgba(0,191,255,0.3)] whitespace-nowrap"><i class="fas fa-plus mr-1"></i> Agregar</button>
                                     </div>
                                 </div>
@@ -806,7 +806,7 @@
             </div>
         </main>
     </div>
-    <!-- ================= CATÁLOGO PÚBLICO (MODO WEBSTORE / EXTERNO) ================= -->
+<!-- ================= CATÁLOGO PÚBLICO (MODO WEBSTORE / EXTERNO) ================= -->
     <div id="public-catalog" class="hidden flex-col fixed inset-0 bg-[#050b14] z-[99999] overflow-y-auto">
         <header class="bg-[#0d1117] border-b border-[#30363d] sticky top-0 z-10 px-4 md:px-8 py-4 flex justify-between items-center shadow-lg">
             <div class="flex items-center gap-3">
@@ -2158,6 +2158,11 @@
             doc.save(`Remito_REM-${numero}.pdf`);
         }
 
+        function abrirCatalogoEnNuevaPestana() {
+            const urlActual = window.location.href.split('?')[0];
+            window.open(urlActual + '?modo=tienda', '_blank');
+        }
+
         function renderTiendaWeb() {
             const elSearch = document.getElementById('buscador-tienda');
             const search = elSearch ? elSearch.value.toLowerCase() : '';
@@ -2274,7 +2279,7 @@
                 id: generarId(), numero: numPresStr, fecha: fechaStr, hora: horaStr, cliente: `${nombreCli} (Web - Tel: ${telCli})`, vendedor: 'Tienda Web',
                 tipoEntrega: dirCli.toLowerCase().includes('retiro') ? 'Retiro en Local' : 'Envío a Domicilio', direccion: dirCli,
                 totalVenta: totalVenta, totalCosto: totalCosto, totalCostoVar: 0, stockDescontado: true,
-                items: JSON.parse(JSON.stringify(carritoWeb.map(c => ({ id: generarId(), pId: c.id, nombre: c.nombre, listaNombre: 'Web', cant: c.cant, precioUnitario: c.precio, costoUnitario: c.costoUnitario, costoVarPerc: 0 })))),
+                items: JSON.parse(JSON.stringify(carritoWeb.map(c => ({ id: generarId(), pId: c.id, nombre: c.nombre, listaName: 'Web', cant: c.cant, precioUnitario: c.precio, costoUnitario: c.costoUnitario, costoVarPerc: 0 })))),
                 detallesTexto: detalles.map(d => `${d.cant}x ${d.nombre}`).join(' | ')
             });
 
