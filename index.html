@@ -1124,7 +1124,6 @@
         // ================== PURGA DE EMERGENCIA ==================
         function purgarFotosYDestrabar() {
             try {
-                // 1. Limpiar LocalStorage general
                 let saved = localStorage.getItem('jorge_hogar_erp_v28');
                 if (saved) {
                     let tempDb = JSON.parse(saved);
@@ -1134,7 +1133,6 @@
                     localStorage.setItem('jorge_hogar_erp_v28', JSON.stringify(tempDb));
                 }
                 
-                // 2. Borrar fragmentos sueltos de cache (img_ID)
                 let keysToRemove = [];
                 for (let i = 0; i < localStorage.length; i++) {
                     let k = localStorage.key(i);
@@ -1142,7 +1140,6 @@
                 }
                 keysToRemove.forEach(k => localStorage.removeItem(k));
                 
-                // 3. Limpiar base actual cargada
                 if(db && db.productos) {
                     db.productos.forEach(p => p.imagenBase64 = "");
                     guardarBD();
@@ -1154,7 +1151,6 @@
                 alert("Error al purgar. Ingresa a la configuración de tu navegador y 'Borrar Datos de Navegación'.");
             }
         }
-        // =========================================================
 
         function forzarModoLocal() {
             esModoNube = false;
@@ -1256,33 +1252,57 @@
 
         let currentUser = null; let accionPendiente = null; let carrito = []; let carritoWeb = [];
 
+        // ================= GUARDADO CON PROMESA Y ESPERA =================
         function guardarBD() {
-            try {
-                if(esModoNube && firestoreDb) {
-                    let dbLiger = JSON.parse(JSON.stringify(db));
-                    if(dbLiger.productos) {
-                        dbLiger.productos.forEach(p => {
-                            if(p.imagenBase64 && p.imagenBase64.length > 500) {
-                                firestoreDb.collection("erp_imagenes").doc(p.id).set({ img: p.imagenBase64 }).catch(()=>{});
-                                try { localStorage.setItem('img_' + p.id, p.imagenBase64); } catch(e){}
-                                p.imagenBase64 = "NUBE:" + p.id;
-                            }
-                        });
+            return new Promise((resolve) => {
+                try {
+                    if(esModoNube && firestoreDb) {
+                        let dbLiger = JSON.parse(JSON.stringify(db));
+                        if(dbLiger.productos) {
+                            dbLiger.productos.forEach(p => {
+                                if(p.imagenBase64 && p.imagenBase64.length > 500) {
+                                    firestoreDb.collection("erp_imagenes").doc(p.id).set({ img: p.imagenBase64 }).catch(()=>{});
+                                    try { localStorage.setItem('img_' + p.id, p.imagenBase64); } catch(e){}
+                                    p.imagenBase64 = "NUBE:" + p.id;
+                                }
+                            });
+                        }
+                        
+                        firestoreDb.collection("erp").doc("jorge_hogar_v28").set(dbLiger)
+                            .then(() => {
+                                guardarLocal(db);
+                                resolve(true);
+                            })
+                            .catch(e => {
+                                console.warn("Error Sync:", e);
+                                guardarLocal(db);
+                                resolve(false);
+                            });
+                    } else {
+                        guardarLocal(db);
+                        resolve(true);
                     }
-                    firestoreDb.collection("erp").doc("jorge_hogar_v28").set(dbLiger).catch(e => console.warn("Error Sync:", e));
+                } catch (e) { 
+                    console.warn("Error crítico al guardar:", e);
+                    resolve(false);
                 }
-                
-                let dbLocal = JSON.parse(JSON.stringify(db));
+            });
+        }
+
+        function guardarLocal(baseData) {
+            try {
+                let dbLocal = JSON.parse(JSON.stringify(baseData));
                 if(dbLocal.productos) {
                     dbLocal.productos.forEach(p => {
                         if(p.imagenBase64 && p.imagenBase64.length > 500) p.imagenBase64 = "[REF]";
                     });
                 }
                 localStorage.setItem('jorge_hogar_erp_v28', JSON.stringify(dbLocal));
-            } catch (e) { 
-                console.warn("Error crítico al guardar:", e);
+            } catch(e) {
+                console.warn("Límite de cuota local superado");
             }
         }
+        // =================================================================
         
         const generarId = () => Date.now().toString(36) + Math.random().toString(36).substr(2);
         const hoyString = () => { const now = new Date(); return now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, '0') + "-" + String(now.getDate()).padStart(2, '0'); };
@@ -2110,7 +2130,6 @@
                     const bg = esIng ? 'bg-[#10b981]/10 text-[#10b981] border border-[#10b981]/30' : 'bg-[#ef4444]/10 text-[#ef4444] border border-[#ef4444]/30'; 
                     const sig = esIng ? '+' : '-'; 
                     
-                    // CORRECCIÓN: Agregar nombre del cliente visible
                     const venBadge = esIng && m.vendedor && m.vendedor !== 'Sin Vendedor' && m.vendedor !== 'N/A' ? `<span class="bg-[#1e293b] text-[#c9d1d9] px-2 py-1 rounded text-[10px] ml-2 border border-[#30363d]"><i class="fas fa-user-tag text-[#10b981] mr-1"></i>${m.vendedor}</span>` : '';
                     const cliBadge = m.cliente && m.cliente !== '-' ? `<span class="block text-[#00bfff] font-bold text-[10px] uppercase mt-1"><i class="fas fa-user mr-1"></i>${m.cliente}</span>` : '';
                     
@@ -2348,6 +2367,10 @@
 
         function finalizarCompraWebYDescontarStock() {
             if(carritoWeb.length === 0) return mostrarToast('El carrito está vacío', 'bg-[#ef4444]');
+            
+            const btn = document.querySelector('#modal-carrito-web button.bg-\\[\\#10b981\\]');
+            if(btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Registrando Pedido...'; }
+
             const nombreCli = document.getElementById('web-cli-nombre').value.trim() || 'Cliente Web';
             const telCli = document.getElementById('web-cli-tel').value.trim() || '-';
             const dirCli = document.getElementById('web-cli-dir').value.trim() || 'Retiro en Local';
@@ -2365,6 +2388,7 @@
             for(let item of carritoWeb) {
                 const prod = db.productos.find(p => p.id === item.id);
                 if(!prod || prod.cantidad < item.cant) {
+                    if(btn) { btn.disabled = false; btn.innerHTML = '<i class="fab fa-whatsapp mr-2 text-lg"></i> Confirmar Pedido por WhatsApp'; }
                     return mostrarToast(`No hay suficiente stock de "${item.nombre}".`, 'bg-[#ef4444]');
                 }
             }
@@ -2400,11 +2424,17 @@
             text += `%0A*TOTAL: $${totalVenta.toLocaleString('es-AR')}*%0A`;
             text += `*Cliente:* ${nombreCli}%0A*Tel:* ${telCli}%0A*Entrega:* ${dirCli}%0A%0A¡Muchas gracias!`;
 
-            guardarBD(); carritoWeb = []; actualizarBadgeCarrito(); cerrarModal('modal-carrito-web'); renderTiendaWeb(); actualizarUI();
-            mostrarToast(`¡Pedido confirmado! Stock descontado con éxito`, 'bg-[#10b981]');
+            guardarBD().then(() => {
+                carritoWeb = []; actualizarBadgeCarrito(); cerrarModal('modal-carrito-web'); renderTiendaWeb(); actualizarUI();
+                mostrarToast(`¡Pedido confirmado! Redirigiendo...`, 'bg-[#10b981]');
+                
+                if(btn) { btn.disabled = false; btn.innerHTML = '<i class="fab fa-whatsapp mr-2 text-lg"></i> Confirmar Pedido por WhatsApp'; }
 
-            const phone = db.config.whatsappTurnos || '';
-            if(phone) { setTimeout(() => { window.open(`https://wa.me/${phone}?text=${text}`, '_blank'); }, 500); }
+                const phone = db.config.whatsappTurnos || '';
+                if(phone) { 
+                    setTimeout(() => { window.location.href = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`; }, 500); 
+                }
+            });
         }
 
         async function generarPDFCatalogo() {
