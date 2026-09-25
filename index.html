@@ -48,7 +48,7 @@
         .toast { padding: 12px 24px; border-radius: 8px; color: var(--accent-text); background-color: var(--accent); font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.2); animation: slideIn 0.3s forwards; }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         
-        .cargando-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.8); display: flex; align-items: center; justify-content: center; z-index: 9999999; backdrop-filter: blur(5px); transition: opacity 0.3s ease; }
+        .cargando-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); display: flex; align-items: center; justify-content: center; z-index: 9999999; backdrop-filter: blur(5px); transition: opacity 0.3s ease; }
         .cargando-spinner { width: 40px; height: 40px; border: 4px solid var(--border-color); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
         
@@ -84,16 +84,17 @@
     </style>
 </head>
 <body class="h-screen w-full">
+    <!-- PANTALLA DE CARGA CON BOTONES DE EMERGENCIA -->
     <div id="carga-overlay-global" class="cargando-overlay flex flex-col">
         <div class="text-center">
             <div class="cargando-spinner mx-auto mb-4"></div>
             <p class="text-lg font-black text-white mb-6" id="carga-overlay-msg">Conectando al Sistema...</p>
             <div class="mt-4 flex flex-col gap-3 max-w-xs mx-auto">
+                <button onclick="forzarModoLocal()" id="btn-forzar-local" class="bg-green-500 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg hover:bg-green-600 transition flex items-center justify-center">
+                    <i class="fas fa-bolt mr-2"></i> Ingreso Rápido
+                </button>
                 <button onclick="purgarFotosYDestrabar()" class="bg-yellow-500 text-black px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg hover:bg-yellow-600 transition flex items-center justify-center">
                     <i class="fas fa-broom mr-2"></i> Reparar Memoria
-                </button>
-                <button onclick="forzarModoLocal()" id="btn-forzar-local" class="hidden bg-red-500 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg hover:bg-red-600 transition flex items-center justify-center">
-                    <i class="fas fa-plug-circle-xmark mr-2"></i> Ingreso Offline
                 </button>
             </div>
         </div>
@@ -171,6 +172,16 @@
             <div id="toast-container"></div>
             <div class="p-4 md:p-6 lg:p-8 max-w-[1400px] mx-auto w-full pt-16 md:pt-6">
                 
+                <div class="flex justify-end mb-4 md:mb-6 w-full hidden md:flex">
+                    <div class="flex items-center gap-3 bg-theme-card/80 backdrop-blur px-4 py-2 rounded-xl border border-theme-border shadow-sm">
+                        <div class="text-right">
+                            <span class="block text-sm font-bold text-theme-text">Gesto <span class="text-theme-accent">Smart</span></span>
+                            <span class="block text-[9px] text-theme-muted uppercase tracking-widest">Enterprise Edition</span>
+                        </div>
+                        <div class="w-10 h-10 rounded-lg bg-theme-panel border border-theme-accent/40 flex items-center justify-center text-theme-accent text-lg font-bold">G</div>
+                    </div>
+                </div>
+
                 <!-- TAB: PUNTO DE VENTA -->
                 <div id="tab-pos" class="tab-content fade-in">
                     <h2 class="text-2xl md:text-3xl font-bold text-theme-text mb-1">Punto de Venta</h2>
@@ -264,6 +275,11 @@
                             <h2 class="text-2xl md:text-3xl font-bold text-theme-text mb-1">Presupuestos Pendientes</h2>
                             <p class="text-theme-muted text-sm">Cobro de presupuestos y emisión de Remitos Oficiales.</p>
                         </div>
+                        <div class="flex flex-col md:flex-row gap-2 w-full md:w-auto" data-roles="admin,cajero">
+                            <button onclick="vaciarDatosMasivos('presupuestos')" class="hidden md:flex bg-theme-card border border-theme-border text-red-500 hover:bg-theme-panel px-3 py-2 rounded-lg font-bold shadow-sm transition items-center text-xs">
+                                <i class="fas fa-trash-alt mr-1"></i> Limpiar Tabla
+                            </button>
+                        </div>
                     </div>
                     <div class="bg-theme-card/90 backdrop-blur rounded-2xl shadow-sm border border-theme-border overflow-x-auto">
                         <table class="w-full text-left border-collapse min-w-[700px]">
@@ -291,8 +307,15 @@
                             <button onclick="vaciarDatosMasivos('clientes')" class="admin-only hidden md:flex bg-theme-card border border-theme-border text-red-500 hover:bg-theme-panel px-3 py-2 rounded-lg font-bold shadow-sm transition items-center text-xs">
                                 <i class="fas fa-trash-alt mr-1"></i> Vaciar Clientes
                             </button>
+                            <button onclick="descargarPlantilla('clientes')" class="admin-only bg-theme-card text-theme-accent border border-theme-border font-bold px-4 py-2.5 rounded-xl shadow-sm flex items-center justify-center text-sm hover:bg-theme-panel transition">
+                                <i class="fas fa-download mr-2"></i> Plantilla Excel
+                            </button>
+                            <label class="admin-only btn-excel font-bold px-4 py-2.5 rounded-xl flex items-center justify-center text-sm cursor-pointer w-full md:w-auto transition">
+                                <i class="fas fa-file-import mr-2"></i> Importar Masivo
+                                <input type="file" accept=".xlsx, .xls" class="hidden" onchange="importarExcel('clientes', event)">
+                            </label>
                             <button onclick="abrirModalCliente()" class="w-full md:w-auto bg-theme-accent text-theme-accentText px-5 py-2.5 rounded-xl font-bold shadow-md hover:bg-theme-accentHover transition flex justify-center items-center text-sm">
-                                <i class="fas fa-user-plus mr-2"></i> Nuevo Cliente
+                                <i class="fas fa-user-plus mr-2"></i> Nuevo
                             </button>
                         </div>
                     </div>
@@ -307,6 +330,7 @@
                                     <th class="py-4 px-4">Nombre y Apellido</th>
                                     <th class="py-4 px-4">Teléfono</th>
                                     <th class="py-4 px-4">Dirección</th>
+                                    <th class="py-4 px-4 text-center">Tipo</th>
                                     <th class="py-4 px-4 text-center w-24">Acciones</th>
                                 </tr>
                             </thead>
@@ -319,13 +343,16 @@
                 <div id="tab-caja" class="tab-content hidden fade-in">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
                         <div>
-                            <h2 class="text-2xl md:text-3xl font-bold text-theme-text mb-1">Caja Diaria</h2>
-                            <p class="text-theme-muted text-sm">Registro de mostrador.</p>
+                            <h2 class="text-2xl md:text-3xl font-bold text-theme-text mb-1">Caja Diaria y Exportación</h2>
+                            <p class="text-theme-muted text-sm">Registro de mostrador y Cierre de Caja PRO en Excel.</p>
                         </div>
                         <div class="flex flex-col md:flex-row gap-3 w-full md:w-auto">
                             <div class="w-full md:w-auto bg-theme-card border border-theme-border rounded-lg flex items-center px-3 shadow-sm py-3 md:py-0 h-10">
                                 <input type="date" id="fecha-caja" class="w-full h-full border-none outline-none bg-transparent font-bold text-theme-text text-sm" onchange="renderCaja()">
                             </div>
+                            <button onclick="exportarCajaExcel()" class="btn-excel font-bold px-4 py-2 rounded-lg shadow-sm flex items-center justify-center text-sm h-10">
+                                <i class="fas fa-file-excel mr-2"></i> Exportar Cierre a Excel
+                            </button>
                         </div>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
@@ -344,6 +371,23 @@
                         <div class="bg-theme-accent p-5 rounded-2xl shadow-md text-theme-accentText">
                             <p class="text-[10px] font-bold uppercase tracking-widest mb-1 opacity-90">TOTAL FACTURADO</p>
                             <h3 class="text-3xl font-black" id="caja-tot-global">$ 0</h3>
+                        </div>
+                    </div>
+                    <div class="bg-theme-card p-4 rounded-2xl shadow-sm border border-theme-border mb-6 flex flex-wrap md:flex-nowrap gap-3 items-center">
+                        <span class="text-xs font-bold text-theme-muted uppercase tracking-widest w-full md:w-auto md:pr-4 border-b md:border-b-0 md:border-r border-theme-border pb-2 md:pb-0 mb-2 md:mb-0">Movimiento<br>Manual</span>
+                        <input type="text" id="mov-detalle" placeholder="Detalle (Ej: Insumos, Flete)" class="flex-grow border border-theme-border rounded-xl px-4 py-2 text-sm outline-none bg-theme-panel text-theme-text font-bold focus:border-theme-accent">
+                        <select id="mov-metodo" class="w-full md:w-40 border border-theme-border rounded-xl px-3 py-2 text-sm outline-none bg-theme-panel text-theme-text font-bold focus:border-theme-accent">
+                            <option value="Efectivo">Efectivo</option>
+                            <option value="Mercado Pago">Mercado Pago</option>
+                            <option value="Transferencia">Transferencia</option>
+                        </select>
+                        <div class="relative w-full md:w-32 flex-shrink-0">
+                            <span class="absolute left-3 top-2 text-theme-muted font-bold">$</span>
+                            <input type="number" id="mov-monto" placeholder="0" class="w-full border border-theme-border rounded-xl pl-7 pr-3 py-2 text-sm outline-none font-bold bg-theme-panel text-theme-text focus:border-theme-accent">
+                        </div>
+                        <div class="flex gap-2 w-full md:w-auto flex-shrink-0">
+                            <button onclick="guardarMovimiento('ingreso')" class="flex-1 bg-green-500 text-white font-bold px-4 py-2 rounded-xl text-sm transition shadow-sm hover:bg-green-600">+ Ingreso</button>
+                            <button onclick="guardarMovimiento('gasto')" class="flex-1 bg-red-500 text-white font-bold px-4 py-2 rounded-xl text-sm transition shadow-sm hover:bg-red-600">- Gasto</button>
                         </div>
                     </div>
                     <div class="bg-theme-card/90 backdrop-blur rounded-2xl shadow-sm border border-theme-border overflow-x-auto">
@@ -371,6 +415,9 @@
                             <p class="text-theme-muted text-sm">Gestión de despachos, Notas de Crédito y Rendición.</p>
                         </div>
                         <div class="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+                            <button onclick="exportarHistorialEntregas()" class="btn-excel font-bold px-4 py-2 rounded-lg shadow-sm flex items-center justify-center text-sm h-10 mr-2">
+                                <i class="fas fa-file-excel mr-2"></i> Exportar Historial Ventas
+                            </button>
                             <div class="bg-theme-card border border-theme-border rounded-lg flex items-center px-3 shadow-sm h-10 w-full md:w-auto">
                                 <i class="far fa-calendar-alt text-theme-accent mr-2"></i>
                                 <input type="date" id="fecha-deposito" class="w-full h-full border-none outline-none bg-transparent font-bold text-theme-text text-sm" onchange="renderEntregas()">
@@ -699,6 +746,19 @@
                                     <button onclick="guardarInfoEmpresa()" class="w-full bg-green-500 text-white py-2.5 rounded-xl font-bold shadow-sm hover:bg-green-600 transition text-sm">Actualizar Datos</button>
                                 </div>
                             </div>
+                            <div class="space-y-6">
+                                <div class="bg-theme-panel p-5 rounded-2xl border border-theme-border">
+                                    <h3 class="text-sm font-bold text-theme-text mb-4 border-b border-theme-border pb-2"><i class="fas fa-shield-alt text-theme-accent mr-2"></i> Respaldo y Seguridad</h3>
+                                    <p class="text-xs text-theme-muted mb-4">Descargá una copia de seguridad de toda la información para evitar pérdida de datos por error humano.</p>
+                                    <button onclick="descargarBackup()" class="w-full bg-theme-card border border-theme-border text-theme-text py-2.5 rounded-xl font-bold shadow-sm hover:border-theme-accent hover:text-theme-accent transition text-sm mb-3 flex items-center justify-center">
+                                        <i class="fas fa-download mr-2"></i> Descargar Copia de Seguridad (JSON)
+                                    </button>
+                                    <label class="w-full bg-theme-card border border-red-500/50 text-red-500 py-2.5 rounded-xl font-bold shadow-sm hover:bg-red-500/10 transition text-sm flex items-center justify-center cursor-pointer">
+                                        <i class="fas fa-upload mr-2"></i> Restaurar desde Archivo (JSON)
+                                        <input type="file" accept=".json" class="hidden" onchange="restaurarBackup(event)">
+                                    </label>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -732,7 +792,7 @@
                         
                         <div class="bg-theme-card border border-theme-border rounded-2xl p-6 shadow-sm relative overflow-hidden">
                             <div class="absolute top-0 right-0 w-2 h-full bg-blue-500"></div>
-                            <h3 class="text-blue-500 font-bold text-lg mb-3 border-b border-theme-border pb-2"><i class="fas fa-id-card-clip mr-2"></i>Sueldos y Comisiones (RRHH)</h3>
+                            <h3 class="text-blue-500 font-bold text-lg mb-3 border-b border-theme-border pb-2"><i class="fas fa-id-card-clip mr-2"></i>Sueldos y Comisiones</h3>
                             <ul class="text-sm text-theme-text opacity-90 space-y-3">
                                 <li><strong>Directorio:</strong> Dás de alta a un vendedor, le asignás un Sueldo Base y un % de comisión. El sistema le crea automáticamente un PIN de acceso (Si el rol es "Vendedor", al ingresar solo verá el Punto de Venta).</li>
                                 <li><strong>Liquidación Mágica:</strong> A fin de mes, vas a la solapa "RRHH y Sueldos". El sistema suma todas las ventas que hizo esa persona en la caja diaria, calcula la comisión, le suma el sueldo base y descuenta las faltas.</li>
@@ -765,67 +825,1398 @@
         </main>
     </div>
 
-    <!-- SCRIPT DE INTERACCIÓN CORTADO PARA AHORRAR ESPACIO, PERO ESTÁ 100% FUNCIONAL EN EL BOTÓN -->
-    <script>
-        function calcularMeta() {
-            const fijosStr = document.getElementById('sim-fijos').value.replace(/\./g, ''); const fijos = parseFloat(fijosStr) || 0;
-            const margenStr = document.getElementById('sim-margen').value; const margen = parseFloat(margenStr) || 0;
-            const objetivoStr = document.getElementById('sim-objetivo').value.replace(/\./g, ''); const objetivo = parseFloat(objetivoStr) || 0;
-            if (margen <= 0) { document.getElementById('sim-resultado').innerText = 'Faltan datos'; return; }
-            const ventasNecesarias = (fijos + objetivo) / (margen / 100);
-            document.getElementById('sim-resultado').innerText = '$ ' + Math.round(ventasNecesarias).toLocaleString('es-AR');
-        }
-
-        // LÓGICA DE GASTOS FIJOS
-        function guardarGastoFijo() {
-            const concepto = document.getElementById('gf-concepto').value.trim(); const monto = parseFloat(document.getElementById('gf-monto').value); const mes = document.getElementById('filtro-mes-rentabilidad').value;
-            if(!concepto || isNaN(monto) || monto <= 0) return mostrarToast('Ingresá detalle y monto', 'bg-red-500'); if(!mes) return mostrarToast('Seleccioná el mes en el filtro de arriba', 'bg-yellow-500');
-            db.gastosFijos.push({ id: generarId(), mes: mes, concepto: concepto, monto: monto }); 
-            guardarBD().then(() => { document.getElementById('gf-concepto').value = ''; document.getElementById('gf-monto').value = ''; actualizarUI(); mostrarToast('Gasto Fijo guardado', 'bg-green-500'); });
-        }
-        function borrarGastoFijo(id) { db.gastosFijos = db.gastosFijos.filter(g => g.id !== id); guardarBD().then(() => { actualizarUI(); }); }
+    <!-- ================= CATÁLOGO PÚBLICO (MODO WEBSTORE / EXTERNO) ================= -->
+    <div id="public-catalog" class="hidden flex-col fixed inset-0 bg-theme-base z-[99999] overflow-y-auto">
+        <header class="bg-theme-card border-b border-theme-border sticky top-0 z-10 px-4 md:px-8 py-4 flex justify-between items-center shadow-md">
+            <div class="flex items-center gap-3">
+                <img id="store-logo" src="https://via.placeholder.com/150/FFFFFF/8b949e?text=Logo" class="w-10 h-10 object-cover rounded-lg border border-theme-border">
+                <div>
+                    <h1 id="store-name" class="text-xl font-bold text-theme-text">Mi Tienda</h1>
+                    <span class="text-[10px] text-green-500 font-bold block"><i class="fas fa-check-circle mr-1"></i> Stock en Vivo</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <button onclick="abrirCarritoWeb()" class="relative text-theme-text hover:text-theme-accent text-2xl transition bg-theme-panel border border-theme-border w-11 h-11 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-shopping-bag"></i>
+                    <span id="cart-badge" class="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full hidden">0</span>
+                </button>
+            </div>
+        </header>
+        <div class="px-4 md:px-8 py-6 bg-theme-panel border-b border-theme-border">
+            <div class="max-w-4xl mx-auto relative">
+                <i class="fas fa-search absolute left-4 top-3.5 text-theme-muted"></i>
+                <input type="text" id="buscador-tienda" placeholder="Buscar productos por nombre o código SKU..." oninput="debouncedRenderTienda()" class="w-full bg-theme-card border border-theme-border text-theme-text pl-12 pr-4 py-3 rounded-xl font-bold focus:border-theme-accent outline-none shadow-sm">
+            </div>
+        </div>
+        <div class="flex-grow p-4 md:p-8 overflow-y-auto">
+            <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6" id="grid-productos-tienda">
+            </div>
+        </div>
         
-        function renderRentabilidad() {
-            if(!currentUser || currentUser.rol !== 'admin') return;
-            const mesActual = document.getElementById('filtro-mes-rentabilidad').value; if(!mesActual) return;
-            let ingresosBrutos = 0, costoMercaderia = 0, costoVariable = 0;
-            let ingresosWeb = 0, ingresosLocal = 0;
-            
-            db.caja.forEach(m => { 
-                if(m.fecha.startsWith(mesActual) && (m.tipo === 'venta' || m.tipo === 'ingreso')) { 
-                    ingresosBrutos += (m.monto || 0); 
-                    costoMercaderia += (m.costoAsociado || 0); 
-                    costoVariable += (m.costoVariableAsociado || 0); 
-                    
-                    if(m.vendedor === 'Tienda Web') {
-                        ingresosWeb += (m.monto || 0);
-                    } else {
-                        ingresosLocal += (m.monto || 0);
-                    }
-                } 
-            });
-            const gastosMes = db.gastosFijos.filter(g => g.mes === mesActual); let totalFijos = 0;
-            const container = document.getElementById('lista-gastos-fijos');
-            if(container) { container.innerHTML = gastosMes.map(g => { totalFijos += g.monto; return `<div class="flex justify-between items-center bg-theme-panel p-3 rounded-xl border border-theme-border shadow-sm"><span class="text-sm font-bold text-theme-text line-clamp-1">${g.concepto}</span><div class="flex items-center gap-3"><span class="text-sm font-bold text-theme-muted">$${g.monto.toLocaleString('es-AR')}</span><button onclick="borrarGastoFijo('${g.id}')" class="text-red-500 hover:text-red-400"><i class="fas fa-times-circle"></i></button></div></div>`; }).join(''); document.getElementById('rent-total-fijos-lbl').innerText = '$' + totalFijos.toLocaleString('es-AR'); }
-            
-            const contribucion = ingresosBrutos - costoMercaderia - costoVariable; const neta = contribucion - totalFijos; const margen = ingresosBrutos > 0 ? (neta / ingresosBrutos) * 100 : 0;
-            
-            document.getElementById('rent-ingresos').innerText = '$ ' + Math.round(ingresosBrutos).toLocaleString('es-AR'); 
-            
-            if(document.getElementById('rent-ingresos-web')) document.getElementById('rent-ingresos-web').innerText = '$ ' + Math.round(ingresosWeb).toLocaleString('es-AR');
-            if(document.getElementById('rent-ingresos-local')) document.getElementById('rent-ingresos-local').innerText = '$ ' + Math.round(ingresosLocal).toLocaleString('es-AR');
+        <a id="btn-wa-flotante" href="#" target="_blank" class="fixed bottom-6 right-6 bg-[#25d366] text-white w-14 h-14 rounded-full flex items-center justify-center text-3xl shadow-lg hover:scale-110 hover:bg-[#1ebe5d] transition-all z-[999999] hidden">
+            <i class="fab fa-whatsapp"></i>
+        </a>
+    </div>
 
-            document.getElementById('rent-costos').innerText = '$ ' + Math.round(costoMercaderia).toLocaleString('es-AR'); 
-            document.getElementById('rent-gastos-variables').innerText = '$ ' + Math.round(costoVariable).toLocaleString('es-AR'); 
-            document.getElementById('rent-contribucion').innerText = '$ ' + Math.round(contribucion).toLocaleString('es-AR'); 
-            document.getElementById('rent-neta').innerText = '$ ' + Math.round(neta).toLocaleString('es-AR'); 
-            document.getElementById('rent-margen').innerText = `Margen Real: ${margen.toFixed(1)}%`;
+    <!-- MODAL CARRITO WEB Y CHECKOUT DIRECTO -->
+    <div id="modal-carrito-web" class="fixed inset-0 bg-theme-base/90 hidden items-center justify-center p-4 backdrop-blur-sm" style="z-index: 999999;">
+        <div class="bg-theme-card border border-theme-border rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden fade-in flex flex-col max-h-[90vh]">
+            <div class="p-5 border-b border-theme-border bg-theme-panel flex justify-between items-center">
+                <h3 class="text-lg font-bold text-theme-text"><i class="fas fa-shopping-cart text-theme-accent mr-2"></i> Tu Pedido Online</h3>
+                <button onclick="cerrarModal('modal-carrito-web')" class="text-theme-muted hover:text-red-500 text-xl transition"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <div class="flex-grow overflow-y-auto p-4 space-y-3" id="lista-carrito-web"></div>
+            
+            <div class="p-5 bg-theme-panel border-t border-theme-border space-y-3">
+                <div class="bg-red-500/10 border border-red-500/30 rounded-xl p-3 mb-2">
+                    <p class="text-[10px] text-red-500 font-bold"><i class="fas fa-info-circle mr-1"></i> TODOS los datos son obligatorios para enviar el pedido.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                    <div>
+                        <label class="text-[9px] font-bold text-theme-muted uppercase block mb-1">Nombre Completo <span class="text-red-500">*</span></label>
+                        <input type="text" id="web-cli-nombre" placeholder="Tu Nombre" class="w-full border border-theme-border p-2 rounded-lg bg-theme-card text-theme-text outline-none focus:border-theme-accent" required>
+                    </div>
+                    <div>
+                        <label class="text-[9px] font-bold text-theme-muted uppercase block mb-1">Teléfono <span class="text-red-500">*</span></label>
+                        <input type="text" id="web-cli-tel" placeholder="Ej: 11 2233 4455" class="w-full border border-theme-border p-2 rounded-lg bg-theme-card text-theme-text outline-none focus:border-theme-accent" required>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="text-[9px] font-bold text-theme-muted uppercase block mb-1">Entrega / Dirección <span class="text-red-500">*</span></label>
+                        <input type="text" id="web-cli-dir" placeholder="Dirección de entrega o 'Retiro en Local'" class="w-full border border-theme-border p-2 rounded-lg bg-theme-card text-theme-text outline-none focus:border-theme-accent" required>
+                    </div>
+                </div>
 
-            let margenContribucionPerc = ingresosBrutos > 0 ? (contribucion / ingresosBrutos) * 100 : 0;
-            document.getElementById('sim-fijos').value = totalFijos.toLocaleString('es-AR');
-            if(margenContribucionPerc > 0) { document.getElementById('sim-margen').value = margenContribucionPerc.toFixed(1); }
-            calcularMeta();
+                <div class="flex justify-between items-center pt-2 border-t border-theme-border mt-2">
+                    <span class="text-theme-muted font-bold uppercase text-xs">Total de la Compra</span>
+                    <h3 class="text-2xl font-black text-green-500" id="total-carrito-web">$0</h3>
+                </div>
+
+                <button onclick="finalizarCompraWebYDescontarStock()" class="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-xl font-bold shadow-md transition flex justify-center items-center text-sm mt-2">
+                    <i class="fab fa-whatsapp mr-2 text-lg"></i> Confirmar Pedido Seguro
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= MODALES ERP ================= -->
+    <div id="modal-confirm" class="fixed inset-0 bg-theme-base/90 hidden items-center justify-center p-4 backdrop-blur-sm" style="z-index: 999999;">
+        <div class="bg-theme-card border border-theme-border rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden text-center p-6 fade-in">
+            <div class="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl border border-red-500/30"><i class="fas fa-exclamation-triangle"></i></div>
+            <h3 class="text-xl font-bold text-theme-text mb-2">¿Estás seguro/a?</h3>
+            <p id="confirm-msg" class="text-sm text-theme-muted mb-6 font-medium">Esta acción no se puede deshacer.</p>
+            <div class="flex gap-3">
+                <button onclick="cerrarModal('modal-confirm')" class="flex-1 bg-theme-panel text-theme-muted border border-theme-border py-3 rounded-xl font-bold hover:border-theme-accent transition">Cancelar</button>
+                <button id="btn-confirmar-accion" onclick="if(accionPendiente) accionPendiente(); cerrarModal('modal-confirm');" class="flex-1 bg-red-500 text-white py-3 rounded-xl font-bold hover:bg-red-600 transition shadow-sm">Sí, confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-cobro" class="fixed inset-0 bg-theme-base/90 hidden items-center justify-center p-4 backdrop-blur-sm" style="z-index: 999998;">
+        <div class="bg-theme-card border border-theme-border rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden fade-in">
+            <div class="p-6 border-b border-theme-border bg-theme-panel flex justify-between items-center">
+                <h3 class="text-xl font-bold text-theme-text">Cobrar e Imprimir Remito</h3>
+                <button onclick="cerrarModal('modal-cobro')" class="text-theme-muted hover:text-red-500 text-xl"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="cobro-presupuesto-id">
+                <div class="bg-theme-card border border-theme-accent/30 rounded-xl p-4 text-center mb-4 shadow-sm">
+                    <p class="text-[10px] font-bold text-theme-accent uppercase tracking-widest mb-1">A Cobrar</p>
+                    <h3 class="text-4xl font-black text-theme-text" id="cobro-monto-total">$0</h3>
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Medio de Pago</label>
+                    <select id="cobro-metodo" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-theme-accent">
+                        <option value="Efectivo">💵 Efectivo (Billetes)</option>
+                        <option value="Mercado Pago">📱 Mercado Pago</option>
+                        <option value="Transferencia">🏦 Transferencia / Tarjeta</option>
+                        <option value="Contraentrega">🚚 Contraentrega (A rendir por chofer)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="p-4 border-t border-theme-border bg-theme-panel flex justify-end gap-3">
+                <button id="btn-conf-cobro" onclick="confirmarCobroPresupuesto()" class="w-full bg-green-500 text-white font-bold py-3 rounded-xl shadow-md hover:bg-green-600 transition flex items-center justify-center">
+                    <i class="fas fa-print mr-2"></i> Procesar e Imprimir Remito
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-rendicion" class="fixed inset-0 bg-theme-base/90 hidden items-center justify-center p-4 backdrop-blur-sm" style="z-index: 999998;">
+        <div class="bg-theme-card border border-theme-border rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden fade-in">
+            <div class="p-6 border-b border-theme-border flex justify-between items-center bg-theme-panel">
+                <h3 class="text-xl font-bold text-theme-text"><i class="fas fa-hand-holding-usd text-green-500 mr-2"></i> Rendir Dinero</h3>
+                <button onclick="cerrarModal('modal-rendicion')" class="text-theme-muted hover:text-red-500 text-xl"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="rendir-id">
+                <p class="text-sm text-theme-muted">Ingresa el dinero a la caja. ¿Cómo pagó finalmente el cliente al chofer?</p>
+                <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Método de Pago Real</label>
+                <select id="rendir-metodo-real" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-theme-accent">
+                    <option value="Efectivo">Efectivo (Billetes)</option>
+                    <option value="Mercado Pago">Mercado Pago</option>
+                    <option value="Transferencia">Transferencia</option>
+                </select>
+            </div>
+            <div class="p-4 border-t border-theme-border bg-theme-panel">
+                <button id="btn-conf-rendicion" onclick="confirmarRendicion()" class="w-full bg-green-500 text-white font-bold py-3 rounded-xl hover:bg-green-600 transition shadow-sm">Confirmar Ingreso a Caja Diaria</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-nc" class="fixed inset-0 bg-theme-base/90 hidden items-center justify-center p-4 backdrop-blur-sm" style="z-index: 999998;">
+        <div class="bg-theme-card border border-theme-border rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden fade-in">
+            <div class="p-6 border-b border-theme-border flex justify-between items-center bg-theme-panel">
+                <h3 class="text-xl font-bold text-theme-text"><i class="fas fa-undo text-red-500 mr-2"></i> Nota de Crédito</h3>
+                <button onclick="cerrarModal('modal-nc')" class="text-theme-muted hover:text-red-500 text-xl"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="nc-id">
+                <div class="bg-red-500/10 border border-red-500/30 rounded-xl p-3 mb-2">
+                    <p class="text-xs text-red-500 font-bold"><i class="fas fa-info-circle mr-1"></i> Se anulará el remito y se emitirá un gasto automático en la caja diaria.</p>
+                </div>
+                <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Motivo y Destino del Stock</label>
+                <select id="nc-motivo" class="w-full border border-red-500/50 p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-red-500">
+                    <option value="arrepentimiento">Arrepentimiento / Cambio (Devolver items al Stock)</option>
+                    <option value="falla">Roto / Falla (Perdido, NO vuelve a Stock)</option>
+                </select>
+            </div>
+            <div class="p-4 border-t border-theme-border bg-theme-panel">
+                <button id="btn-conf-nc" onclick="confirmarNC()" class="w-full bg-red-500 text-white font-bold py-3 rounded-xl shadow-sm hover:bg-red-600 transition">Emitir N.C y Anular Remito</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-empleado" class="fixed inset-0 bg-theme-base/90 hidden items-center justify-center p-4 backdrop-blur-sm" style="z-index: 999998;">
+        <div class="bg-theme-card border border-theme-border rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden fade-in">
+            <div class="p-6 border-b border-theme-border bg-theme-panel flex justify-between items-center">
+                <h3 class="text-xl font-bold text-theme-text" id="modal-empleado-title">Ficha de Empleado y Acceso</h3>
+                <button onclick="cerrarModal('modal-empleado')" class="text-theme-muted hover:text-red-500 text-xl"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                <input type="hidden" id="emp-id">
+                <h4 class="text-sm font-bold text-theme-accent border-b border-theme-border pb-2">1. Datos Personales</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-2">
+                        <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Nombre Completo (Usuario)</label>
+                        <input type="text" id="emp-nombre" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-theme-accent" required>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Teléfono Contacto</label>
+                        <input type="text" id="emp-tel" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-theme-accent">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Teléfono Familiar</label>
+                        <input type="text" id="emp-telfam" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-theme-accent">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Dirección</label>
+                        <input type="text" id="emp-dir" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-theme-accent">
+                    </div>
+                </div>
+
+                <h4 class="text-sm font-bold text-green-500 border-b border-theme-border pb-2 mt-6">2. Contratación</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Fecha de Ingreso</label>
+                        <input type="date" id="emp-ingreso" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-green-500">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Sueldo Base ($)</label>
+                        <input type="number" id="emp-sueldo" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-green-500" required>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Comisión (%)</label>
+                        <input type="number" id="emp-comision" step="0.1" value="1.5" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-theme-accent" required>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Modalidad de Pago</label>
+                        <select id="emp-modalidad" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-green-500">
+                            <option value="Mensual">Mensual</option>
+                            <option value="Quincenal">Quincenal</option>
+                            <option value="Semanal">Semanal</option>
+                        </select>
+                    </div>
+                </div>
+
+                <h4 class="text-sm font-bold text-red-500 border-b border-theme-border pb-2 mt-6">3. Permisos de Acceso</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-[10px] font-bold text-red-500 uppercase tracking-widest block mb-1">PIN de Ingreso (4 dígitos)</label>
+                        <input type="text" id="emp-pin" maxlength="4" placeholder="1234" class="w-full border border-red-500/30 p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text text-center tracking-[0.5em] focus:border-red-500" required>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-red-500 uppercase tracking-widest block mb-1">Rol en el Sistema</label>
+                        <select id="emp-rol" class="w-full border border-red-500/30 p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-red-500">
+                            <option value="vendedor">Vendedor (Solo Factura y Lectura Catálogo)</option>
+                            <option value="cajero">Cajero (Cobra y Remito)</option>
+                            <option value="admin">Administrador (Total)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="p-4 border-t border-theme-border bg-theme-panel flex justify-end gap-3">
+                <button onclick="guardarEmpleado()" class="bg-theme-accent text-theme-accentText px-8 py-3 rounded-xl font-bold shadow-md hover:bg-theme-accentHover transition w-full">Guardar Ficha y Accesos</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-stock" class="fixed inset-0 bg-theme-base/90 hidden items-center justify-center p-4 backdrop-blur-sm" style="z-index: 999998;">
+        <div class="bg-theme-card border border-theme-border rounded-3xl w-full max-w-md shadow-2xl overflow-hidden fade-in">
+            <div class="p-6 border-b border-theme-border bg-theme-panel flex justify-between items-center"><h3 class="text-xl font-bold text-theme-text" id="modal-stock-title">Artículo</h3><button onclick="cerrarModal('modal-stock')" class="text-theme-muted hover:text-red-500 text-xl"><i class="fas fa-times"></i></button></div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="stock-id">
+                <div><label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">SKU / Código Numérico</label><input type="text" id="stock-sku" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-theme-accent" required></div>
+                <div><label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Nombre</label><input type="text" id="stock-nombre" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-theme-accent" required></div>
+                <div class="admin-only"><label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Costo Base ($)</label><input type="number" id="stock-costo" step="0.01" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-theme-accent"></div>
+                <div><label class="text-[10px] font-bold text-green-500 uppercase tracking-widest block mb-1">Precio Fijo Web/Local (Dejar 0 para usar margen)</label><input type="number" id="stock-precio-manual" placeholder="0" class="w-full border border-green-500/50 p-3 rounded-xl bg-green-500/10 outline-none text-sm font-bold text-theme-text focus:border-green-500"></div>
+                <div><label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Stock Físico</label><input type="number" id="stock-cantidad" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-theme-accent" required></div>
+            </div>
+            <div class="p-4 border-t border-theme-border bg-theme-panel flex justify-end"><button onclick="guardarStock()" class="w-full bg-theme-accent text-theme-accentText py-3 rounded-xl font-bold transition hover:bg-theme-accentHover">Guardar</button></div>
+        </div>
+    </div>
+
+    <div id="modal-lista" class="fixed inset-0 bg-theme-base/90 hidden items-center justify-center p-4 backdrop-blur-sm" style="z-index: 999998;">
+        <div class="bg-theme-card border border-theme-border rounded-3xl w-full max-w-md shadow-2xl overflow-hidden fade-in">
+            <div class="p-6 border-b border-theme-border bg-theme-panel flex justify-between items-center"><h3 class="text-xl font-bold text-theme-text" id="modal-lista-title">Lista</h3><button onclick="cerrarModal('modal-lista')" class="text-theme-muted hover:text-red-500 text-xl"><i class="fas fa-times"></i></button></div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="lista-id">
+                <div><label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Nombre</label><input type="text" id="lista-nombre" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text" required></div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="text-[10px] font-bold text-theme-accent uppercase tracking-widest block mb-1">Remarque (%)</label><input type="number" step="0.1" id="lista-margen" class="w-full border border-theme-accent/30 p-2 rounded-lg bg-theme-panel outline-none text-sm text-center text-theme-text" required></div>
+                    <div><label class="text-[10px] font-bold text-red-500 uppercase tracking-widest block mb-1">Costo Var (%)</label><input type="number" step="0.1" id="lista-costo-var" class="w-full border border-red-500/30 p-2 rounded-lg bg-theme-panel outline-none text-sm text-center text-theme-text"></div>
+                </div>
+            </div>
+            <div class="p-4 border-t border-theme-border bg-theme-panel flex justify-end"><button onclick="guardarLista()" class="w-full bg-theme-accent text-theme-accentText py-3 rounded-xl font-bold transition hover:bg-theme-accentHover">Guardar</button></div>
+        </div>
+    </div>
+
+    <div id="modal-cliente" class="fixed inset-0 bg-theme-base/90 hidden items-center justify-center p-4 backdrop-blur-sm" style="z-index: 999998;">
+        <div class="bg-theme-card border border-theme-border rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden fade-in">
+            <div class="p-6 border-b border-theme-border bg-theme-panel flex justify-between items-center"><h3 class="text-xl font-bold text-theme-text" id="modal-cliente-title">Cliente</h3><button onclick="cerrarModal('modal-cliente')" class="text-theme-muted hover:text-red-500 text-xl"><i class="fas fa-times"></i></button></div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="cliente-id">
+                <div><label class="text-[10px] font-bold text-theme-muted uppercase block mb-1">Nombre / Apellido</label><input type="text" id="m-cli-nombre" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel text-theme-text" required></div>
+                <div><label class="text-[10px] font-bold text-theme-muted uppercase block mb-1">Teléfono</label><input type="text" id="m-cli-tel" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel text-theme-text"></div>
+                <div><label class="text-[10px] font-bold text-theme-muted uppercase block mb-1">Dirección</label><input type="text" id="m-cli-dir" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel text-theme-text"></div>
+                <div><label class="text-[10px] font-bold text-theme-muted uppercase block mb-1">Tipo</label><select id="m-cli-tipo" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel text-theme-text"><option value="Minorista">Minorista</option><option value="Mayorista">Mayorista</option></select></div>
+                
+                <div id="m-cli-historial-container" class="mt-4 hidden border-t border-theme-border pt-4">
+                    <h4 class="text-[10px] font-bold text-theme-accent uppercase mb-2">Últimas Compras</h4>
+                    <div id="m-cli-historial-lista" class="max-h-32 overflow-y-auto space-y-2 pr-1"></div>
+                </div>
+            </div>
+            <div class="p-4 border-t border-theme-border bg-theme-panel"><button onclick="guardarClienteModal()" class="w-full bg-theme-accent text-theme-accentText py-3 rounded-xl font-bold transition hover:bg-theme-accentHover">Guardar</button></div>
+        </div>
+    </div>
+    <!DOCTYPE html>
+<html lang="es" data-theme="luxe">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gesto Smart - Enterprise ERP & Web Catalog</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        theme: {
+                            base: 'var(--bg-base)', card: 'var(--bg-card)', panel: 'var(--bg-panel)',
+                            border: 'var(--border-color)', text: 'var(--text-main)', muted: 'var(--text-muted)',
+                            accent: 'var(--accent)', accentHover: 'var(--accent-hover)', accentText: 'var(--accent-text)',
+                        }
+                    },
+                    fontFamily: { sans: ['Inter', 'sans-serif'], }
+                }
+            }
         }
     </script>
-</body>
-</html>
+    <style>
+        /* MOTOR DE TEMAS MULTICOLOR */
+        :root, :root[data-theme="luxe"] { --bg-base: #F8F9FA; --bg-pattern: #E9ECEF; --bg-card: #FFFFFF; --bg-panel: #F1F3F5; --border-color: #DEE2E6; --text-main: #212529; --text-muted: #6C757D; --accent: #4F46E5; --accent-hover: #4338CA; --accent-text: #FFFFFF; --success: #10b981; --danger: #ef4444; }
+        :root[data-theme="zen"] { --bg-base: #F5F4F0; --bg-pattern: #E3DFD5; --bg-card: #FFFFFF; --bg-panel: #EAE8E0; --border-color: #D3CEBE; --text-main: #4A463B; --text-muted: #9E988A; --accent: #8E9C7E; --accent-hover: #758366; --accent-text: #FFFFFF; --success: #10b981; --danger: #d97706; }
+        :root[data-theme="ocean"] { --bg-base: #F0F4F8; --bg-pattern: #D9E2EC; --bg-card: #FFFFFF; --bg-panel: #F8FAFC; --border-color: #CBD5E1; --text-main: #1E293B; --text-muted: #64748B; --accent: #0EA5E9; --accent-hover: #0284C7; --accent-text: #FFFFFF; --success: #10b981; --danger: #ef4444; }
+        :root[data-theme="rose"] { --bg-base: #FFFAF9; --bg-pattern: #FCE7F3; --bg-card: #FFFFFF; --bg-panel: #FFF1F2; --border-color: #FBCFE8; --text-main: #4C1D95; --text-muted: #9D174D; --accent: #F43F5E; --accent-hover: #E11D48; --accent-text: #FFFFFF; --success: #10b981; --danger: #ef4444; }
+        :root[data-theme="night"] { --bg-base: #0F172A; --bg-pattern: #1E293B; --bg-card: #1E293B; --bg-panel: #0F172A; --border-color: #334155; --text-main: #F8FAFC; --text-muted: #94A3B8; --accent: #38BDF8; --accent-hover: #0EA5E9; --accent-text: #0F172A; --success: #34D399; --danger: #F87171; }
+
+        * { box-sizing: border-box; }
+        body { background-color: var(--bg-base); background-image: radial-gradient(circle, var(--bg-pattern) 1.5px, transparent 1.5px); background-size: 30px 30px; color: var(--text-main); overflow: hidden; transition: background-color 0.3s ease, color 0.3s ease; }
+        .fade-in { animation: fadeIn 0.25s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        ::-webkit-scrollbar { width: 6px; height: 6px; } 
+        ::-webkit-scrollbar-track { background: var(--bg-panel); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+        
+        #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 999999; display: flex; flex-direction: column; gap: 10px; }
+        .toast { padding: 12px 24px; border-radius: 8px; color: var(--accent-text); background-color: var(--accent); font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.2); animation: slideIn 0.3s forwards; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        
+        .cargando-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); display: flex; align-items: center; justify-content: center; z-index: 9999999; backdrop-filter: blur(5px); transition: opacity 0.3s ease; }
+        .cargando-spinner { width: 40px; height: 40px; border: 4px solid var(--border-color); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .btn-excel { background-color: var(--success); color: white; transition: 0.2s; box-shadow: 0 0 10px rgba(16, 185, 129, 0.2); cursor: pointer; }
+        .btn-excel:hover { background-color: #059669; box-shadow: 0 0 15px rgba(16, 185, 129, 0.4); }
+        
+        input, select, textarea { background-color: var(--bg-card) !important; border-color: var(--border-color) !important; color: var(--text-main) !important; transition: all 0.2s ease; }
+        input:focus, select:focus, textarea:focus { outline: none !important; border-color: var(--accent) !important; box-shadow: 0 0 5px var(--accent) !important; background-color: var(--bg-panel) !important; }
+        select:disabled, button:disabled { opacity: 0.5; cursor: not-allowed !important; }
+        table { border-collapse: separate; border-spacing: 0; width: 100%; }
+        thead th { background-color: var(--bg-panel); color: var(--text-muted); border-bottom: 2px solid var(--border-color); }
+        tbody tr { border-bottom: 1px solid var(--border-color); transition: background-color 0.15s; }
+        tbody tr:hover { background-color: var(--bg-panel); }
+        
+        input[type="date"]::-webkit-calendar-picker-indicator, input[type="month"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: 0.6; transition: 0.2s; padding: 4px; }
+        input[type="date"]::-webkit-calendar-picker-indicator:hover, input[type="month"]::-webkit-calendar-picker-indicator:hover { opacity: 1; transform: scale(1.1); }
+        :root[data-theme="night"] input[type="date"]::-webkit-calendar-picker-indicator, :root[data-theme="night"] input[type="month"]::-webkit-calendar-picker-indicator { filter: invert(1); }
+
+        body.app-locked .admin-only { display: none !important; }
+        .tab-link { padding-top: 8px !important; padding-bottom: 8px !important; margin-bottom: 2px !important; font-size: 0.85rem !important; }
+        .sidebar-section-title { margin-top: 10px !important; margin-bottom: 4px !important; }
+        
+        .tooltip-container { position: relative; display: inline-block; cursor: help; }
+        .tooltip-text { visibility: hidden; opacity: 0; width: 220px; background-color: var(--bg-card); color: var(--text-muted); text-align: left; border-radius: 8px; padding: 10px; position: absolute; z-index: 50; top: 120%; right: 0; border: 1px solid var(--border-color); box-shadow: 0 10px 25px rgba(0,0,0,0.1); transition: opacity 0.3s, visibility 0.3s; font-size: 10px; font-weight: 500; pointer-events: none; }
+        .tooltip-container:hover .tooltip-text { visibility: visible; opacity: 1; }
+        
+        body.modo-tienda-activa #erp-container { display: none !important; }
+        body.modo-tienda-activa #public-catalog { display: flex !important; }
+        #public-catalog { position: fixed; inset: 0; background-color: var(--bg-base); z-index: 99999; display: none; flex-direction: column; overflow-y: auto; }
+        .product-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; transition: transform 0.2s, box-shadow 0.2s; }
+        .product-card:hover { transform: translateY(-4px); box-shadow: 0 10px 25px rgba(0,0,0,0.05); border-color: var(--accent); }
+        .product-image { width: 100%; height: 180px; object-fit: contain; background-color: #FFFFFF; padding: 10px; border-bottom: 1px solid var(--border-color); }
+    </style>
+</head>
+<body class="h-screen w-full">
+    <!-- PANTALLA DE CARGA CON BOTONES DE EMERGENCIA -->
+    <div id="carga-overlay-global" class="cargando-overlay flex flex-col">
+        <div class="text-center">
+            <div class="cargando-spinner mx-auto mb-4"></div>
+            <p class="text-lg font-black text-white mb-6" id="carga-overlay-msg">Conectando al Sistema...</p>
+            <div class="mt-4 flex flex-col gap-3 max-w-xs mx-auto">
+                <button onclick="forzarModoLocal()" id="btn-forzar-local" class="bg-green-500 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg hover:bg-green-600 transition flex items-center justify-center">
+                    <i class="fas fa-bolt mr-2"></i> Ingreso Rápido
+                </button>
+                <button onclick="purgarFotosYDestrabar()" class="bg-yellow-500 text-black px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg hover:bg-yellow-600 transition flex items-center justify-center">
+                    <i class="fas fa-broom mr-2"></i> Reparar Memoria
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANTALLA LOGIN -->
+    <div id="pantalla-login" class="fixed inset-0 bg-theme-base z-[99999] hidden flex-col items-center justify-center p-4">
+        <div class="bg-theme-card border border-theme-border rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl fade-in relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-2 h-full bg-theme-accent"></div>
+            <div class="w-16 h-16 bg-theme-panel text-theme-accent border border-theme-accent rounded-full flex items-center justify-center mx-auto mb-4 text-2xl"><i class="fas fa-fingerprint"></i></div>
+            <h2 class="text-2xl font-black text-theme-text mb-1">Gesto Smart</h2>
+            <div class="text-left mb-4">
+                <label class="text-[10px] font-bold text-theme-muted uppercase block mb-1">Usuario</label>
+                <select id="login-user" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel text-theme-text font-bold"></select>
+            </div>
+            <div class="text-left mb-6">
+                <label class="text-[10px] font-bold text-theme-muted uppercase block mb-1">PIN</label>
+                <input type="password" id="login-pin" maxlength="4" class="w-full text-center text-3xl tracking-[0.5em] border border-theme-border rounded-xl py-3 bg-theme-panel text-theme-text font-bold" onkeypress="if(event.key === 'Enter') procesarLogin()">
+            </div>
+            <button onclick="procesarLogin()" class="w-full bg-theme-accent text-theme-accentText py-3 rounded-xl font-bold transition text-sm shadow-md hover:bg-theme-accentHover">Ingresar al Sistema</button>
+        </div>
+    </div>
+
+    <!-- ERP CONTAINER -->
+    <div id="erp-container" class="hidden flex-col md:flex-row h-screen w-full">
+        <div class="fixed top-0 left-0 right-0 z-30 md:hidden bg-theme-card border-b border-theme-border text-theme-text px-4 py-3 flex items-center justify-between shadow-sm">
+            <span class="text-sm font-bold text-theme-muted">Gesto Smart</span>
+            <button class="text-theme-accent text-xl" onclick="document.querySelector('aside').classList.toggle('hidden')"><i class="fas fa-bars"></i></button>
+        </div>
+        
+        <aside class="w-full md:w-[240px] bg-theme-card border-r border-theme-border flex flex-col shrink-0 shadow-lg z-20 md:min-h-screen pt-14 md:pt-4 hidden md:flex absolute md:relative inset-0">
+            <div class="p-4 space-y-3 flex-1 flex flex-col overflow-hidden">
+                <div class="bg-theme-panel p-3 rounded-xl border border-theme-border shadow-sm text-center">
+                    <label class="cursor-pointer block mb-2 group relative w-max mx-auto">
+                        <img id="clientLogoPreview" src="https://via.placeholder.com/150/FFFFFF/8b949e?text=Logo" class="w-10 h-10 object-cover rounded-lg border border-theme-border transition bg-white">
+                        <div class="absolute inset-0 bg-black/60 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition" id="upload-logo-overlay"><span class="text-[8px] font-bold text-white uppercase">Subir</span></div>
+                        <input type="file" id="clientLogoInput" accept="image/*" class="hidden" onchange="procesarLogoSidebar(event)">
+                    </label>
+                    <input type="text" id="nombreComercioSide" class="bg-transparent border-b border-transparent font-bold text-xs w-full text-center text-theme-text px-1 outline-none pb-1" readonly>
+                </div>
+                
+                <nav id="mobile-menu" class="flex flex-col flex-1 overflow-y-auto pr-1">
+                    <div class="text-[9px] font-bold text-theme-accent uppercase px-2 sidebar-section-title">Ventas Operativas</div>
+                    <a href="#" onclick="switchTab('tab-pos', this)" class="tab-link active flex items-center px-3 text-theme-accentText bg-theme-accent rounded-lg font-bold shadow-md transition" data-roles="admin,vendedor"><i class="fas fa-shopping-cart w-5"></i> Punto de Venta</a>
+                    <a href="#" onclick="switchTab('tab-presupuestos', this)" class="tab-link flex items-center px-3 text-theme-muted hover:bg-theme-panel hover:text-theme-text rounded-lg font-medium transition" data-roles="admin,vendedor,cajero"><i class="fas fa-file-invoice-dollar w-5"></i> Presupuestos</a>
+                    <a href="#" onclick="switchTab('tab-clientes', this)" class="tab-link flex items-center px-3 text-theme-muted hover:bg-theme-panel hover:text-theme-text rounded-lg font-medium transition" data-roles="admin,vendedor"><i class="fas fa-users w-5"></i> Base de Clientes</a>
+                    
+                    <div class="text-[9px] font-bold text-theme-muted uppercase px-2 sidebar-section-title mt-4" data-roles="admin,cajero">Caja y Despacho</div>
+                    <a href="#" onclick="switchTab('tab-caja', this)" class="tab-link flex items-center px-3 text-theme-muted hover:bg-theme-panel hover:text-theme-text rounded-lg font-medium transition" data-roles="admin,cajero"><i class="fas fa-cash-register w-5"></i> Caja Diaria</a>
+                    <a href="#" onclick="switchTab('tab-deposito', this)" class="tab-link flex items-center px-3 text-theme-muted hover:bg-theme-panel hover:text-theme-text rounded-lg font-medium transition" data-roles="admin,cajero"><i class="fas fa-truck-ramp-box w-5"></i> Remitos / Entregas</a>
+                    
+                    <div class="text-[9px] font-bold text-theme-muted uppercase px-2 sidebar-section-title mt-4" data-roles="admin,vendedor">E-Commerce y Stock</div>
+                    <a href="#" onclick="switchTab('tab-catalogo', this)" class="tab-link flex items-center px-3 text-theme-muted hover:bg-theme-panel hover:text-theme-text rounded-lg font-medium transition" data-roles="admin,vendedor"><i class="fas fa-images w-5"></i> Catálogo y Stock</a>
+                    <a href="#" onclick="switchTab('tab-precios', this)" class="tab-link flex items-center px-3 text-theme-muted hover:bg-theme-panel hover:text-theme-text rounded-lg font-medium transition" data-roles="admin"><i class="fas fa-tags w-5"></i> Listas de Costos</a>
+                    
+                    <div class="text-[9px] font-bold text-theme-muted uppercase px-2 sidebar-section-title mt-4" data-roles="admin">Administración</div>
+                    <a href="#" onclick="switchTab('tab-rrhh', this)" class="tab-link flex items-center px-3 text-theme-muted hover:bg-theme-panel hover:text-theme-text rounded-lg font-medium transition" data-roles="admin"><i class="fas fa-id-card-clip w-5"></i> RRHH y Sueldos</a>
+                    <a href="#" onclick="switchTab('tab-rentabilidad', this)" class="tab-link flex items-center px-3 text-theme-muted hover:bg-theme-panel hover:text-theme-text rounded-lg font-medium transition" data-roles="admin"><i class="fas fa-chart-pie w-5"></i> Rentabilidad Neta</a>
+                    <a href="#" onclick="switchTab('tab-config', this)" class="tab-link flex items-center px-3 text-theme-muted hover:bg-theme-panel hover:text-theme-text rounded-lg font-medium transition" data-roles="admin"><i class="fas fa-shield-alt w-5"></i> Config. y Backups</a>
+                    
+                    <div class="text-[9px] font-bold text-theme-muted uppercase px-2 sidebar-section-title mt-4" data-roles="admin,vendedor,cajero">Soporte Operativo</div>
+                    <a href="#" onclick="switchTab('tab-manual', this)" class="tab-link flex items-center px-3 text-theme-muted hover:bg-theme-panel hover:text-theme-text rounded-lg font-medium transition" data-roles="admin,vendedor,cajero"><i class="fas fa-book w-5"></i> Manual de Uso</a>
+                </nav>
+                <div class="mt-2 pt-3 border-t border-theme-border">
+                    <div class="flex items-center justify-between mb-2 px-2">
+                        <div class="flex items-center"><div class="w-2 h-2 rounded-full bg-green-500 mr-2"></div><span id="lbl-usuario-actual" class="text-xs font-bold text-theme-text">Admin</span></div>
+                        <span id="lbl-rol-actual" class="bg-theme-panel text-theme-muted border border-theme-border px-1.5 py-0.5 rounded text-[9px] uppercase font-bold">Admin</span>
+                    </div>
+                    <button onclick="procesarLogout()" class="w-full bg-theme-panel border border-red-500/30 text-red-500 py-2 rounded-lg font-bold transition text-xs hover:bg-red-500/10"><i class="fas fa-sign-out-alt mr-2"></i> Cerrar Sesión</button>
+                </div>
+            </div>
+        </aside>
+
+        <main class="flex-grow flex flex-col h-[calc(100vh-4rem)] md:h-screen relative overflow-y-auto">
+            <div id="toast-container"></div>
+            <div class="p-4 md:p-6 lg:p-8 max-w-[1400px] mx-auto w-full pt-16 md:pt-6">
+                
+                <div class="flex justify-end mb-4 md:mb-6 w-full hidden md:flex">
+                    <div class="flex items-center gap-3 bg-theme-card/80 backdrop-blur px-4 py-2 rounded-xl border border-theme-border shadow-sm">
+                        <div class="text-right">
+                            <span class="block text-sm font-bold text-theme-text">Gesto <span class="text-theme-accent">Smart</span></span>
+                            <span class="block text-[9px] text-theme-muted uppercase tracking-widest">Enterprise Edition</span>
+                        </div>
+                        <div class="w-10 h-10 rounded-lg bg-theme-panel border border-theme-accent/40 flex items-center justify-center text-theme-accent text-lg font-bold">G</div>
+                    </div>
+                </div>
+
+                <!-- TAB: PUNTO DE VENTA -->
+                <div id="tab-pos" class="tab-content fade-in">
+                    <h2 class="text-2xl md:text-3xl font-bold text-theme-text mb-1">Punto de Venta</h2>
+                    <p class="text-theme-muted text-sm mb-6">Armá carritos, aplicá descuentos y generá Presupuestos.</p>
+                    
+                    <div class="bg-theme-card/90 backdrop-blur p-4 rounded-2xl shadow-sm border border-theme-border mb-4 grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="md:col-span-2">
+                            <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1"><i class="fas fa-user mr-1"></i> Cliente</label>
+                            <select id="pos-cliente" class="w-full border border-theme-border p-2.5 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-theme-accent" onchange="cargarDirPOS()"></select>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1"><i class="fas fa-truck mr-1"></i> Entrega</label>
+                            <select id="pos-tipo-entrega" class="w-full border border-theme-border p-2.5 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-theme-accent" onchange="toggleDireccionPOS()">
+                                <option value="Retiro en Local">Retiro en Local</option>
+                                <option value="Envío a Domicilio">Envío a Domicilio</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-theme-accent uppercase tracking-widest block mb-1"><i class="fas fa-id-badge mr-1"></i> Vendedor</label>
+                            <select id="pos-vendedor" class="w-full border border-theme-accent/30 p-2.5 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-accent focus:border-theme-accent"></select>
+                        </div>
+                        <div class="md:col-span-4" id="div-pos-direccion" style="display: none;">
+                            <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Dirección de Entrega</label>
+                            <input type="text" id="pos-direccion" class="w-full border border-theme-border p-2.5 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-theme-accent" placeholder="Ej: Av. San Martín 1234">
+                        </div>
+                    </div>
+
+                    <div class="bg-theme-card/90 backdrop-blur p-5 rounded-2xl shadow-sm border border-theme-accent/20 mb-8 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 bg-theme-accent text-theme-accentText text-[9px] font-bold px-3 py-1 rounded-bl-xl tracking-widest shadow-sm">CARRITO</div>
+                        <form onsubmit="agregarAlCarrito(event)" class="mt-2 border-b border-theme-border pb-4 mb-4">
+                            <div class="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+                                <div class="md:col-span-2 relative">
+                                    <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Producto (Buscador)</label>
+                                    <div class="relative flex items-center">
+                                        <i class="fas fa-search absolute left-3 text-theme-muted"></i>
+                                        <input type="text" id="pos-producto-nombre" list="dl-productos-pos" placeholder="Ej: Sillón..." class="w-full border border-theme-border py-2.5 pl-9 pr-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-theme-accent" autocomplete="off" oninput="debouncedActualizarPrecioPos()" required>
+                                        <datalist id="dl-productos-pos"></datalist>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Lista de Precios</label>
+                                    <select id="pos-lista" class="w-full border border-theme-border p-2.5 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-theme-accent" required onchange="actualizarPrecioPos()"></select>
+                                </div>
+                                <div>
+                                    <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Cantidad</label>
+                                    <input type="number" id="pos-cantidad" min="1" step="1" value="1" class="w-full border border-theme-border p-2.5 rounded-xl bg-theme-panel outline-none text-sm font-bold text-center text-theme-text focus:border-theme-accent" required oninput="actualizarPrecioPos()">
+                                </div>
+                                <div>
+                                    <button type="submit" class="w-full bg-theme-panel text-theme-accent hover:bg-theme-accent hover:text-theme-accentText font-bold py-2.5 rounded-xl transition flex items-center justify-center border border-theme-border shadow-sm"><i class="fas fa-cart-plus mr-2"></i> Añadir</button>
+                                </div>
+                            </div>
+                        </form>
+
+                        <div id="pos-carrito-container" class="mb-4 hidden overflow-x-auto">
+                            <div class="border border-theme-border rounded-xl overflow-hidden mb-4 bg-theme-panel min-w-[500px]">
+                                <table class="w-full text-left text-sm">
+                                    <thead class="bg-theme-card text-[10px] text-theme-muted uppercase border-b border-theme-border">
+                                        <tr><th class="p-2.5 text-center">Cant.</th><th class="p-2.5">Producto</th><th class="p-2.5">Lista Base</th><th class="p-2.5 text-right">Subtotal</th><th class="p-2.5 text-center w-10"></th></tr>
+                                    </thead>
+                                    <tbody id="pos-carrito-tbody" class="divide-y divide-theme-border"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- TOTAL Y DESCUENTO -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-center bg-theme-panel p-3 rounded-xl border border-theme-border">
+                            <div>
+                                <label class="text-[10px] font-bold text-theme-accent uppercase tracking-widest block mb-1 text-center">Descuento Global (%)</label>
+                                <input type="number" id="pos-descuento" min="0" max="100" value="0" class="w-full border border-theme-accent/30 p-2.5 rounded-xl bg-theme-card outline-none text-sm font-bold text-center text-theme-accent focus:border-theme-accent shadow-inner" oninput="renderCarrito()">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1 text-center">Total del Carrito</label>
+                                <div class="bg-theme-card p-2 rounded-xl text-center border border-theme-border shadow-sm flex flex-col justify-center min-h-[46px]">
+                                    <span class="text-[10px] text-red-500 line-through hidden leading-tight" id="pos-subtotal-preview">$0</span>
+                                    <span class="text-xl font-black text-green-500 leading-tight" id="pos-total-preview">$0</span>
+                                </div>
+                            </div>
+                            <div>
+                                <button id="btn-guardar-presupuesto" onclick="guardarPresupuesto()" class="w-full h-full bg-theme-accent text-theme-accentText font-bold py-3.5 rounded-xl shadow-md hover:bg-theme-accentHover transition flex items-center justify-center text-sm min-h-[46px]">
+                                    <i class="fas fa-share-square mr-2"></i> Enviar a Caja
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB: PRESUPUESTOS -->
+                <div id="tab-presupuestos" class="tab-content hidden fade-in">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4">
+                        <div>
+                            <h2 class="text-2xl md:text-3xl font-bold text-theme-text mb-1">Presupuestos Pendientes</h2>
+                            <p class="text-theme-muted text-sm">Cobro de presupuestos y emisión de Remitos Oficiales.</p>
+                        </div>
+                        <div class="flex flex-col md:flex-row gap-2 w-full md:w-auto" data-roles="admin,cajero">
+                            <button onclick="vaciarDatosMasivos('presupuestos')" class="hidden md:flex bg-theme-card border border-theme-border text-red-500 hover:bg-theme-panel px-3 py-2 rounded-lg font-bold shadow-sm transition items-center text-xs">
+                                <i class="fas fa-trash-alt mr-1"></i> Limpiar Tabla
+                            </button>
+                        </div>
+                    </div>
+                    <div class="bg-theme-card/90 backdrop-blur rounded-2xl shadow-sm border border-theme-border overflow-x-auto">
+                        <table class="w-full text-left border-collapse min-w-[700px]">
+                            <thead>
+                                <tr class="bg-theme-panel border-b border-theme-border text-[10px] text-theme-muted font-bold uppercase tracking-widest">
+                                    <th class="py-4 px-4 w-28">N° / Fecha</th>
+                                    <th class="py-4 px-4">Cliente / Detalle</th>
+                                    <th class="py-4 px-4 text-right">Total</th>
+                                    <th class="py-4 px-4 text-center w-48" data-roles="admin,cajero">Acción Caja</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lista-presupuestos-tabla" class="divide-y divide-theme-border text-sm"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB: CLIENTES -->
+                <div id="tab-clientes" class="tab-content hidden fade-in">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4">
+                        <div>
+                            <h2 class="text-2xl md:text-3xl font-bold text-theme-text mb-1">Base de Clientes</h2>
+                            <p class="text-theme-muted text-sm">Directorio e historial de ventas.</p>
+                        </div>
+                        <div class="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+                            <button onclick="vaciarDatosMasivos('clientes')" class="admin-only hidden md:flex bg-theme-card border border-theme-border text-red-500 hover:bg-theme-panel px-3 py-2 rounded-lg font-bold shadow-sm transition items-center text-xs">
+                                <i class="fas fa-trash-alt mr-1"></i> Vaciar Clientes
+                            </button>
+                            <button onclick="descargarPlantilla('clientes')" class="admin-only bg-theme-card text-theme-accent border border-theme-border font-bold px-4 py-2.5 rounded-xl shadow-sm flex items-center justify-center text-sm hover:bg-theme-panel transition">
+                                <i class="fas fa-download mr-2"></i> Plantilla Excel
+                            </button>
+                            <label class="admin-only btn-excel font-bold px-4 py-2.5 rounded-xl flex items-center justify-center text-sm cursor-pointer w-full md:w-auto transition">
+                                <i class="fas fa-file-import mr-2"></i> Importar Masivo
+                                <input type="file" accept=".xlsx, .xls" class="hidden" onchange="importarExcel('clientes', event)">
+                            </label>
+                            <button onclick="abrirModalCliente()" class="w-full md:w-auto bg-theme-accent text-theme-accentText px-5 py-2.5 rounded-xl font-bold shadow-md hover:bg-theme-accentHover transition flex justify-center items-center text-sm">
+                                <i class="fas fa-user-plus mr-2"></i> Nuevo
+                            </button>
+                        </div>
+                    </div>
+                    <div class="relative bg-theme-card rounded-xl shadow-sm border border-theme-border flex items-center mb-6">
+                        <i class="fas fa-search absolute left-4 text-theme-muted"></i>
+                        <input type="text" id="buscador-clientes" placeholder="Buscar cliente por nombre..." oninput="debouncedRenderClientes()" class="w-full pl-12 pr-4 py-3 border-none bg-transparent outline-none focus:ring-0 text-theme-text font-bold">
+                    </div>
+                    <div class="bg-theme-card/90 backdrop-blur rounded-2xl shadow-sm border border-theme-border overflow-hidden">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-theme-panel border-b border-theme-border text-[10px] text-theme-muted font-bold uppercase tracking-widest">
+                                    <th class="py-4 px-4">Nombre y Apellido</th>
+                                    <th class="py-4 px-4">Teléfono</th>
+                                    <th class="py-4 px-4">Dirección</th>
+                                    <th class="py-4 px-4 text-center">Tipo</th>
+                                    <th class="py-4 px-4 text-center w-24">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lista-clientes-tabla" class="divide-y divide-theme-border text-sm"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB: CAJA DIARIA -->
+                <div id="tab-caja" class="tab-content hidden fade-in">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+                        <div>
+                            <h2 class="text-2xl md:text-3xl font-bold text-theme-text mb-1">Caja Diaria y Exportación</h2>
+                            <p class="text-theme-muted text-sm">Registro de mostrador y Cierre de Caja PRO en Excel.</p>
+                        </div>
+                        <div class="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+                            <div class="w-full md:w-auto bg-theme-card border border-theme-border rounded-lg flex items-center px-3 shadow-sm py-3 md:py-0 h-10">
+                                <input type="date" id="fecha-caja" class="w-full h-full border-none outline-none bg-transparent font-bold text-theme-text text-sm" onchange="renderCaja()">
+                            </div>
+                            <button onclick="exportarCajaExcel()" class="btn-excel font-bold px-4 py-2 rounded-lg shadow-sm flex items-center justify-center text-sm h-10">
+                                <i class="fas fa-file-excel mr-2"></i> Exportar Cierre a Excel
+                            </button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                        <div class="bg-green-500/10 p-5 rounded-2xl border border-green-500/30 relative">
+                            <p class="text-[10px] font-black text-green-600 uppercase tracking-widest mb-1">EFECTIVO EN CAJA (Billetes)</p>
+                            <h3 class="text-3xl font-black text-green-600" id="caja-tot-efectivo">$ 0</h3>
+                        </div>
+                        <div class="bg-theme-card p-5 rounded-2xl shadow-sm border border-theme-border border-l-4 border-l-blue-500">
+                            <p class="text-[10px] font-bold text-theme-muted uppercase tracking-widest mb-1">MERCADO PAGO</p>
+                            <h3 class="text-2xl font-bold text-blue-500" id="caja-tot-mp">$ 0</h3>
+                        </div>
+                        <div class="bg-theme-card p-5 rounded-2xl shadow-sm border border-theme-border border-l-4 border-l-purple-500">
+                            <p class="text-[10px] font-bold text-theme-muted uppercase tracking-widest mb-1">TRANSFERENCIA</p>
+                            <h3 class="text-2xl font-bold text-purple-500" id="caja-tot-transf">$ 0</h3>
+                        </div>
+                        <div class="bg-theme-accent p-5 rounded-2xl shadow-md text-theme-accentText">
+                            <p class="text-[10px] font-bold uppercase tracking-widest mb-1 opacity-90">TOTAL FACTURADO</p>
+                            <h3 class="text-3xl font-black" id="caja-tot-global">$ 0</h3>
+                        </div>
+                    </div>
+                    <div class="bg-theme-card p-4 rounded-2xl shadow-sm border border-theme-border mb-6 flex flex-wrap md:flex-nowrap gap-3 items-center">
+                        <span class="text-xs font-bold text-theme-muted uppercase tracking-widest w-full md:w-auto md:pr-4 border-b md:border-b-0 md:border-r border-theme-border pb-2 md:pb-0 mb-2 md:mb-0">Movimiento<br>Manual</span>
+                        <input type="text" id="mov-detalle" placeholder="Detalle (Ej: Insumos, Flete)" class="flex-grow border border-theme-border rounded-xl px-4 py-2 text-sm outline-none bg-theme-panel text-theme-text font-bold focus:border-theme-accent">
+                        <select id="mov-metodo" class="w-full md:w-40 border border-theme-border rounded-xl px-3 py-2 text-sm outline-none bg-theme-panel text-theme-text font-bold focus:border-theme-accent">
+                            <option value="Efectivo">Efectivo</option>
+                            <option value="Mercado Pago">Mercado Pago</option>
+                            <option value="Transferencia">Transferencia</option>
+                        </select>
+                        <div class="relative w-full md:w-32 flex-shrink-0">
+                            <span class="absolute left-3 top-2 text-theme-muted font-bold">$</span>
+                            <input type="number" id="mov-monto" placeholder="0" class="w-full border border-theme-border rounded-xl pl-7 pr-3 py-2 text-sm outline-none font-bold bg-theme-panel text-theme-text focus:border-theme-accent">
+                        </div>
+                        <div class="flex gap-2 w-full md:w-auto flex-shrink-0">
+                            <button onclick="guardarMovimiento('ingreso')" class="flex-1 bg-green-500 text-white font-bold px-4 py-2 rounded-xl text-sm transition shadow-sm hover:bg-green-600">+ Ingreso</button>
+                            <button onclick="guardarMovimiento('gasto')" class="flex-1 bg-red-500 text-white font-bold px-4 py-2 rounded-xl text-sm transition shadow-sm hover:bg-red-600">- Gasto</button>
+                        </div>
+                    </div>
+                    <div class="bg-theme-card/90 backdrop-blur rounded-2xl shadow-sm border border-theme-border overflow-x-auto">
+                        <table class="w-full text-left border-collapse min-w-[800px]">
+                            <thead>
+                                <tr class="bg-theme-panel border-b border-theme-border text-[10px] text-theme-muted font-bold uppercase tracking-widest">
+                                    <th class="py-4 px-4 w-16">Hora</th>
+                                    <th class="py-4 px-4 w-20">Tipo</th>
+                                    <th class="py-4 px-4">Concepto / Detalle</th>
+                                    <th class="py-4 px-4">Medio</th>
+                                    <th class="py-4 px-4 text-right">Monto</th>
+                                    <th class="py-4 px-4 text-center w-16">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lista-caja-tabla" class="divide-y divide-theme-border text-sm"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB: DEPOSITO Y REMITOS -->
+                <div id="tab-deposito" class="tab-content hidden fade-in">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4">
+                        <div>
+                            <h2 class="text-2xl md:text-3xl font-bold text-theme-text mb-1">Depósito y Despachos</h2>
+                            <p class="text-theme-muted text-sm">Gestión de despachos, Notas de Crédito y Rendición.</p>
+                        </div>
+                        <div class="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+                            <button onclick="exportarHistorialEntregas()" class="btn-excel font-bold px-4 py-2 rounded-lg shadow-sm flex items-center justify-center text-sm h-10 mr-2">
+                                <i class="fas fa-file-excel mr-2"></i> Exportar Historial Ventas
+                            </button>
+                            <div class="bg-theme-card border border-theme-border rounded-lg flex items-center px-3 shadow-sm h-10 w-full md:w-auto">
+                                <i class="far fa-calendar-alt text-theme-accent mr-2"></i>
+                                <input type="date" id="fecha-deposito" class="w-full h-full border-none outline-none bg-transparent font-bold text-theme-text text-sm" onchange="renderEntregas()">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-theme-card/90 backdrop-blur rounded-2xl shadow-sm border border-theme-border overflow-hidden">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-theme-panel border-b border-theme-border text-[10px] text-theme-muted font-bold uppercase tracking-widest">
+                                    <th class="py-4 px-4 w-28">Remito / Hora</th>
+                                    <th class="py-4 px-4">Cliente / Dirección</th>
+                                    <th class="py-4 px-4">Mercadería</th>
+                                    <th class="py-4 px-4 text-center w-32">Estado de Entrega</th>
+                                    <th class="py-4 px-4 text-center w-40">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lista-entregas-tabla" class="divide-y divide-theme-border text-sm"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB: CATÁLOGO Y STOCK -->
+                <div id="tab-catalogo" class="tab-content hidden fade-in">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4">
+                        <div>
+                            <h2 class="text-2xl md:text-3xl font-bold text-theme-text mb-1">Stock, Imágenes y Catálogo</h2>
+                            <p class="text-theme-muted text-sm">Gestioná inventario por SKU, procesá fotos ultralivianas y activá tu tienda pública.</p>
+                        </div>
+                        <div class="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+                            <button onclick="abrirModalStock()" class="admin-only w-full md:w-auto bg-theme-accent text-theme-accentText px-4 py-2.5 rounded-xl font-bold shadow-md hover:bg-theme-accentHover transition flex justify-center items-center text-sm"><i class="fas fa-plus mr-1"></i> Nuevo Artículo</button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                        <div class="md:col-span-3 relative bg-theme-card rounded-2xl shadow-sm border border-theme-border flex items-center h-full">
+                            <i class="fas fa-search absolute left-5 text-theme-muted text-lg"></i>
+                            <input type="text" id="buscador-stock" placeholder="Buscar por SKU o Nombre..." oninput="debouncedRenderStock()" class="w-full h-full pl-14 pr-14 border-none bg-transparent outline-none font-bold text-theme-text rounded-2xl">
+                        </div>
+                    </div>
+                    <div class="bg-theme-card/90 backdrop-blur rounded-2xl shadow-sm border border-theme-border overflow-x-auto pb-10">
+                        <table class="w-full text-left border-collapse min-w-[800px]">
+                            <thead>
+                                <tr id="thead-stock" class="bg-theme-panel border-b border-theme-border text-[10px] text-theme-muted font-bold uppercase tracking-widest align-bottom">
+                                </tr>
+                            </thead>
+                            <tbody id="lista-stock-tabla" class="divide-y divide-theme-border text-sm">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB: PRECIOS Y COSTOS -->
+                <div id="tab-precios" class="tab-content hidden fade-in admin-only">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4">
+                        <div>
+                            <h2 class="text-2xl md:text-3xl font-bold text-theme-text mb-1">Listas de Costos y Precios</h2>
+                            <p class="text-theme-muted text-sm">Control central de márgenes, costos variables y utilidades netas.</p>
+                        </div>
+                        <div class="flex flex-col md:flex-row gap-2 w-full md:w-auto admin-only">
+                            <button onclick="abrirModalLista()" class="bg-theme-accent text-theme-accentText px-5 py-2.5 rounded-xl font-bold shadow-md hover:bg-theme-accentHover transition flex justify-center items-center text-sm">
+                                <i class="fas fa-plus mr-2"></i> Nueva Lista
+                            </button>
+                        </div>
+                    </div>
+                    <div class="bg-theme-card/90 backdrop-blur rounded-2xl shadow-sm border border-theme-border overflow-x-auto">
+                        <table class="w-full text-left border-collapse min-w-[800px]">
+                            <thead>
+                                <tr id="thead-precios" class="bg-theme-panel border-b border-theme-border text-[10px] text-theme-muted font-bold uppercase tracking-widest align-bottom">
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-precios" class="divide-y divide-theme-border text-sm">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB: RRHH Y SUELDOS -->
+                <div id="tab-rrhh" class="admin-only tab-content hidden fade-in">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-3">
+                        <div>
+                            <h2 class="text-3xl font-black text-theme-text mb-1">Directorio y Liquidación de Sueldos</h2>
+                            <p class="text-theme-muted text-sm">Alta de empleados y creación automática de Usuarios / PINes de acceso.</p>
+                        </div>
+                        <div class="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+                            <button onclick="abrirModalEmpleado()" class="bg-theme-accent hover:bg-theme-accentHover text-theme-accentText px-4 py-2.5 rounded-xl font-bold transition text-sm shadow-md"><i class="fas fa-user-plus mr-1"></i> Alta Empleado</button>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-theme-card rounded-2xl shadow-sm border border-theme-border overflow-hidden mb-8">
+                        <div class="p-5 border-b border-theme-border bg-theme-panel flex justify-between items-center">
+                            <h3 class="font-bold text-theme-text text-sm"><i class="fas fa-users text-theme-accent mr-2"></i> Directorio de Personal y Accesos</h3>
+                        </div>
+                        <div class="overflow-x-auto max-h-64">
+                            <table class="w-full text-left border-collapse min-w-[800px]">
+                                <thead class="sticky top-0 bg-theme-panel border-b border-theme-border z-10">
+                                    <tr class="text-[10px] font-bold uppercase tracking-widest text-theme-muted">
+                                        <th class="py-3 px-4">Empleado</th>
+                                        <th class="py-3 px-4">Contacto</th>
+                                        <th class="py-3 px-4 text-center">Ingreso</th>
+                                        <th class="py-3 px-4 text-right">Sueldo / Comisión</th>
+                                        <th class="py-3 px-4 text-center">Acceso al Sistema</th>
+                                        <th class="py-3 px-4 text-center">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="lista-directorio-tabla" class="text-sm font-medium divide-y divide-theme-border"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-col md:flex-row justify-between items-center bg-theme-panel p-4 rounded-2xl border border-theme-border shadow-inner mb-6">
+                        <h3 class="font-bold text-theme-text text-sm"><i class="fas fa-calculator text-green-500 mr-2"></i> Cálculo de Liquidaciones</h3>
+                        <div class="flex items-center mt-3 md:mt-0">
+                            <span class="text-theme-muted text-xs font-bold mr-3 uppercase tracking-widest">Período de Ventas:</span>
+                            <input type="month" id="filtro-mes-rrhh" class="border border-theme-border rounded-lg p-2 bg-theme-card outline-none text-theme-text text-xs font-bold focus:border-theme-accent" onchange="renderRRHH()">
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div class="bg-theme-card p-6 rounded-2xl shadow-sm border border-theme-border">
+                            <div class="flex items-center justify-between mb-2"><p class="text-[10px] font-bold text-theme-muted uppercase tracking-widest">SUELDOS BASE</p><i class="fas fa-money-bill-wave text-theme-muted opacity-50"></i></div>
+                            <h3 class="text-2xl font-black text-theme-text" id="rrhh-tot-base">$ 0</h3>
+                        </div>
+                        <div class="bg-theme-card p-6 rounded-2xl shadow-sm border border-theme-border">
+                            <div class="flex items-center justify-between mb-2"><p class="text-[10px] font-bold text-green-500 uppercase tracking-widest">COMISIONES TOTALES</p><i class="fas fa-percentage text-green-500/50"></i></div>
+                            <h3 class="text-2xl font-black text-green-500" id="rrhh-tot-comisiones">$ 0</h3>
+                        </div>
+                        <div class="bg-green-500 p-6 rounded-2xl shadow-md text-white">
+                            <p class="text-[10px] font-black opacity-90 uppercase tracking-widest mb-1">TOTAL A PAGAR</p>
+                            <h3 class="text-3xl font-black" id="rrhh-tot-general">$ 0</h3>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-theme-card rounded-2xl shadow-sm border border-theme-border overflow-hidden mb-8">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse min-w-[800px]">
+                                <thead>
+                                    <tr class="bg-theme-panel border-b border-theme-border text-[10px] font-bold uppercase tracking-widest text-theme-muted">
+                                        <th class="py-4 px-6">Vendedor</th>
+                                        <th class="py-4 px-6 text-right">Ventas del Mes</th>
+                                        <th class="py-4 px-6 text-right text-green-500 border-l border-theme-border">Comisión Ganada</th>
+                                        <th class="py-4 px-6 text-right border-l border-theme-border">Sueldo Base</th>
+                                        <th class="py-4 px-6 text-right text-theme-accent font-black border-l border-theme-border">Total Estimado</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="lista-rrhh-tabla" class="text-sm font-medium divide-y divide-theme-border"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="bg-theme-card/90 backdrop-blur p-5 rounded-2xl shadow-sm border border-theme-border mb-8">
+                        <div class="flex justify-between items-center mb-4 border-b border-theme-border pb-2">
+                            <h3 class="text-lg font-bold text-theme-text"><i class="fas fa-file-invoice-dollar text-green-500 mr-2"></i> Emitir Recibo de Sueldo</h3>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-start mb-6">
+                            <div class="md:col-span-2">
+                                <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Empleado</label>
+                                <select id="sueldo-empleado" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-theme-accent" onchange="calcularTotalSueldo()"></select>
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Desde Fecha</label>
+                                <input type="date" id="sueldo-desde" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-theme-accent" onchange="calcularTotalSueldo()">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Hasta Fecha</label>
+                                <input type="date" id="sueldo-hasta" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-theme-accent" onchange="calcularTotalSueldo()">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Sueldo Proporcional ($)</label>
+                                <input type="text" inputmode="numeric" id="sueldo-base" placeholder="0" class="w-full border border-theme-accent/30 p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-accent focus:border-theme-accent" oninput="formatCurrencyInput(this); calcularTotalSueldo(true)">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Días Ausentes</label>
+                                <input type="number" id="sueldo-faltas-dias" placeholder="Cant. días" step="0.5" class="w-full border border-red-500/30 p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-red-500 focus:border-red-500" oninput="calcularTotalSueldo(true)">
+                                <p id="lbl-descuento-faltas" class="text-[10px] font-bold text-red-500 mt-1 hidden text-right">Descuento: $0</p>
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Adelantos ($)</label>
+                                <input type="text" inputmode="numeric" id="sueldo-vales" placeholder="0" class="w-full border border-red-500/30 p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-red-500 focus:border-red-500" oninput="formatCurrencyInput(this); calcularTotalSueldo(true)">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Premios / Extras ($)</label>
+                                <input type="text" inputmode="numeric" id="sueldo-premios" placeholder="0" class="w-full border border-green-500/30 p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-green-500 focus:border-green-500" oninput="formatCurrencyInput(this); calcularTotalSueldo(true)">
+                            </div>
+                        </div>
+                        <div class="flex flex-col md:flex-row items-center justify-between bg-theme-panel p-4 rounded-xl border border-theme-border">
+                            <div class="text-center md:text-left mb-4 md:mb-0">
+                                <p class="text-[10px] font-bold text-theme-muted uppercase tracking-widest mb-1">Total Neto a Cobrar</p>
+                                <h3 class="text-3xl font-black text-green-500" id="sueldo-total-neto">$0</h3>
+                            </div>
+                            <button onclick="imprimirReciboSueldo()" class="w-full md:w-auto bg-theme-card hover:bg-theme-panel text-theme-text font-bold py-3 px-8 rounded-xl shadow-sm transition flex items-center justify-center border border-theme-border">
+                                <i class="fas fa-file-pdf mr-2 text-red-500"></i> Generar Recibo PDF
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB: RENTABILIDAD -->
+                <div id="tab-rentabilidad" class="admin-only tab-content hidden fade-in">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+                        <div>
+                            <h2 class="text-2xl md:text-3xl font-bold text-theme-text mb-1">Rentabilidad General</h2>
+                            <p class="text-theme-muted text-sm">Tablero definitivo de economía y proyección comercial.</p>
+                        </div>
+                        <div class="flex gap-3 w-full md:w-auto">
+                            <div class="bg-theme-card border border-theme-border rounded-xl flex items-center px-4 shadow-sm w-full md:w-auto py-3 md:py-0 h-10">
+                                <i class="fas fa-filter text-theme-accent mr-2"></i>
+                                <input type="month" id="filtro-mes-rentabilidad" class="w-full h-full border-none outline-none bg-transparent font-bold text-theme-text" onchange="renderRentabilidad()">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                        <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            
+                            <!-- TARJETA ACTUALIZADA CON DESGLOSE WEB/LOCAL -->
+                            <div class="bg-theme-card p-5 rounded-2xl shadow-sm border border-theme-border relative">
+                                <div class="flex justify-between items-start mb-1">
+                                    <p class="text-[10px] font-bold text-theme-muted uppercase tracking-widest">1. VENTAS TOTALES</p>
+                                </div>
+                                <h3 class="text-2xl font-bold text-green-500" id="rent-ingresos">$ 0</h3>
+                                <div class="mt-2 flex justify-between text-[10px] bg-theme-panel p-2 rounded-lg border border-theme-border">
+                                    <span class="text-theme-accent font-bold"><i class="fas fa-globe mr-1"></i>Web: <span id="rent-ingresos-web">$0</span></span>
+                                    <span class="text-theme-muted font-bold"><i class="fas fa-store mr-1"></i>Físico: <span id="rent-ingresos-local">$0</span></span>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-theme-card p-5 rounded-2xl shadow-sm border border-theme-border relative">
+                                <div class="flex justify-between items-start mb-1">
+                                    <p class="text-[10px] font-bold text-theme-muted uppercase tracking-widest">2. COSTO DIRECTO (CMV)</p>
+                                </div>
+                                <h3 class="text-2xl font-bold text-yellow-500" id="rent-costos">$ 0</h3>
+                                <p class="text-[10px] text-theme-muted mt-1">Costo de la mercadería vendida</p>
+                            </div>
+                            <div class="bg-theme-card p-5 rounded-2xl shadow-sm border border-theme-border relative">
+                                <div class="flex justify-between items-start mb-1">
+                                    <p class="text-[10px] font-bold text-theme-muted uppercase tracking-widest">3. COSTOS VARIABLES</p>
+                                </div>
+                                <h3 class="text-2xl font-bold text-red-500" id="rent-gastos-variables">$ 0</h3>
+                                <p class="text-[10px] text-theme-muted mt-1">Impuestos y comisiones de venta</p>
+                            </div>
+                            <div class="bg-theme-accent/10 p-5 rounded-2xl shadow-inner border border-theme-accent/30 relative">
+                                <div class="flex justify-between items-start mb-1">
+                                    <p class="text-[10px] font-bold text-theme-accent uppercase tracking-widest">4. MARGEN DE CONTRIBUCIÓN</p>
+                                </div>
+                                <h3 class="text-2xl font-bold text-theme-accent" id="rent-contribucion">$ 0</h3>
+                                <p class="text-[10px] text-theme-accent/70 mt-1">Plata disponible para pagar fijos</p>
+                            </div>
+                            <div id="rent-card-neta" class="md:col-span-2 bg-theme-accent p-6 rounded-2xl shadow-md relative text-theme-accentText transition-colors mt-2">
+                                <div class="flex justify-between items-start mb-1">
+                                    <p class="text-[10px] font-bold opacity-80 uppercase tracking-widest" id="rent-neta-label">RESULTADO NETO LIMPIO</p>
+                                </div>
+                                <div class="flex items-end gap-4">
+                                    <h3 class="text-4xl font-black" id="rent-neta">$ 0</h3>
+                                    <p class="text-sm opacity-90 font-bold bg-black/20 px-2 py-1 rounded" id="rent-margen">Margen Real: 0%</p>
+                                </div>
+                            </div>
+                            <div class="md:col-span-2 bg-theme-card p-6 rounded-2xl shadow-sm border border-theme-border mt-2 relative">
+                                <h3 class="text-lg font-bold text-theme-accent mb-4"><i class="fas fa-bullseye mr-2"></i> Simulador de Objetivos Comerciales</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                                    <div><label class="text-[10px] font-bold text-theme-muted uppercase block mb-1">Costos Fijos ($)</label><input type="text" inputmode="numeric" id="sim-fijos" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel text-theme-text" oninput="formatCurrencyInput(this); calcularMeta()"></div>
+                                    <div><label class="text-[10px] font-bold text-theme-muted uppercase block mb-1">Margen Contrib. (%)</label><input type="number" id="sim-margen" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel text-theme-text" oninput="calcularMeta()"></div>
+                                    <div><label class="text-[10px] font-bold text-green-500 uppercase block mb-1">Ganancia Objetivo ($)</label><input type="text" inputmode="numeric" id="sim-objetivo" placeholder="Ej: 2.000.000" class="w-full border border-green-500/50 p-3 rounded-xl bg-green-500/10 text-theme-text focus:border-green-500" oninput="formatCurrencyInput(this); calcularMeta()"></div>
+                                    <div class="bg-theme-panel p-3 rounded-xl border border-theme-border text-center">
+                                        <p class="text-[10px] font-bold text-theme-muted uppercase mb-1">Tenés que facturar</p>
+                                        <h3 class="text-xl font-black text-theme-accent" id="sim-resultado">$0</h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-theme-card border border-theme-border rounded-3xl p-6 flex flex-col h-[450px]">
+                            <div class="flex justify-between items-center mb-1">
+                                <h3 class="font-bold text-theme-text flex items-center">
+                                    <i class="fas fa-building text-theme-muted mr-2"></i> 5. Gastos Fijos
+                                </h3>
+                                <button onclick="vaciarDatosMasivos('gastos')" class="text-xs text-red-500 hover:text-red-400"><i class="fas fa-trash"></i> Vaciar</button>
+                            </div>
+                            <p class="text-xs text-theme-muted mb-4">Se asocian al mes filtrado arriba.</p>
+                            <div class="bg-theme-panel p-3 rounded-xl shadow-sm border border-theme-border mb-4">
+                                <div class="flex flex-col gap-2">
+                                    <input type="text" id="gf-concepto" placeholder="Concepto (Ej: Alquiler)" class="w-full border border-theme-border bg-theme-card rounded-lg outline-none text-sm px-3 py-2 text-theme-text font-bold focus:border-theme-accent" onkeypress="if(event.key === 'Enter') guardarGastoFijo()">
+                                    <div class="flex gap-2">
+                                        <input type="number" id="gf-monto" placeholder="Monto $" class="w-full border border-theme-border bg-theme-card rounded-lg outline-none text-sm px-3 py-2 font-bold text-theme-text focus:border-theme-accent" onkeypress="if(event.key === 'Enter') guardarGastoFijo()">
+                                        <button onclick="guardarGastoFijo()" class="bg-theme-accent text-theme-accentText px-4 py-2 rounded-lg font-bold hover:bg-theme-accentHover transition flex-shrink-0 shadow-sm whitespace-nowrap"><i class="fas fa-plus mr-1"></i> Agregar</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex-grow overflow-y-auto space-y-2 pr-2" id="lista-gastos-fijos"></div>
+                            <div class="mt-4 pt-4 border-t border-theme-border flex justify-between items-center"><span class="text-[10px] font-bold text-theme-muted uppercase tracking-widest">Total Fijos (Mes)</span><span class="font-bold text-xl text-theme-text" id="rent-total-fijos-lbl">$0</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CONFIGURACIÓN DE EMPRESA Y BACKUPS -->
+                <div id="tab-config" class="admin-only tab-content hidden fade-in">
+                    <div class="max-w-4xl mx-auto bg-theme-card/90 backdrop-blur rounded-3xl shadow-sm border border-theme-border p-6 md:p-8">
+                        <h2 class="text-2xl font-bold text-theme-text mb-1">Configuración y Seguridad</h2>
+                        <p class="text-theme-muted text-sm mb-8">Personalización y Respaldo de la base de datos.</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div class="space-y-6">
+                                <div class="bg-theme-panel p-5 rounded-2xl border border-theme-border shadow-sm">
+                                    <h3 class="text-sm font-bold text-theme-text mb-4 border-b border-theme-border pb-2"><i class="fas fa-palette text-theme-accent mr-2"></i> Paleta de Colores</h3>
+                                    <p class="text-xs text-theme-muted mb-4">Adaptá la interfaz a tu gusto. Todas tienen modo oscuro para proteger tu vista.</p>
+                                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-2">
+                                        <button onclick="cambiarTema('luxe')" class="py-2.5 rounded-xl font-bold text-xs border-2 transition border-[#4F46E5] bg-[#F8F9FA] text-[#4F46E5] hover:bg-[#F1F3F5] shadow-sm">Alta Gama</button>
+                                        <button onclick="cambiarTema('zen')" class="py-2.5 rounded-xl font-bold text-xs border-2 transition border-[#8E9C7E] bg-[#F5F4F0] text-[#8E9C7E] hover:bg-[#EAE8E0] shadow-sm">Spa Zen</button>
+                                        <button onclick="cambiarTema('ocean')" class="py-2.5 rounded-xl font-bold text-xs border-2 transition border-[#0EA5E9] bg-[#F0F4F8] text-[#0EA5E9] hover:bg-[#F8FAFC] shadow-sm">Retail Ocean</button>
+                                        <button onclick="cambiarTema('rose')" class="py-2.5 rounded-xl font-bold text-xs border-2 transition border-[#F43F5E] bg-[#FFFAF9] text-[#F43F5E] hover:bg-[#FFF1F2] shadow-sm">Rosé Boutique</button>
+                                        <button onclick="cambiarTema('night')" class="py-2.5 rounded-xl font-bold text-xs border-2 transition border-[#38BDF8] bg-[#0F172A] text-[#38BDF8] hover:bg-[#1E293B] shadow-sm col-span-2 md:col-span-1">Dark Night</button>
+                                    </div>
+                                </div>
+                                <div class="bg-theme-panel p-5 rounded-2xl border border-theme-border">
+                                    <h3 class="text-sm font-bold text-theme-text mb-4 border-b border-theme-border pb-2"><i class="fas fa-store text-green-500 mr-2"></i> Datos del Negocio</h3>
+                                    <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Nombre Comercial</label>
+                                    <input type="text" id="conf-empresa-nombre" class="w-full border border-theme-border p-3 rounded-xl bg-theme-card outline-none text-sm font-bold text-theme-text focus:border-theme-accent mb-4">
+                                    <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">WhatsApp de Pedidos (Ej: 5491112345678)</label>
+                                    <input type="text" id="conf-empresa-ws" class="w-full border border-theme-border p-3 rounded-xl bg-theme-card outline-none text-sm font-bold text-theme-text focus:border-theme-accent mb-4" placeholder="5491100000000">
+                                    
+                                    <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1 mt-4">Redondeo de Precios Calculados</label>
+                                    <select id="conf-empresa-redondeo" class="w-full border border-theme-border p-3 rounded-xl bg-theme-card outline-none text-sm font-bold text-theme-text focus:border-theme-accent mb-4">
+                                        <option value="1">Sin redondeo (Cálculo exacto)</option>
+                                        <option value="10">Múltiplos de $10</option>
+                                        <option value="50">Múltiplos de $50</option>
+                                        <option value="100">Múltiplos de $100</option>
+                                    </select>
+                                    
+                                    <button onclick="guardarInfoEmpresa()" class="w-full bg-green-500 text-white py-2.5 rounded-xl font-bold shadow-sm hover:bg-green-600 transition text-sm">Actualizar Datos</button>
+                                </div>
+                            </div>
+                            <div class="space-y-6">
+                                <div class="bg-theme-panel p-5 rounded-2xl border border-theme-border">
+                                    <h3 class="text-sm font-bold text-theme-text mb-4 border-b border-theme-border pb-2"><i class="fas fa-shield-alt text-theme-accent mr-2"></i> Respaldo y Seguridad</h3>
+                                    <p class="text-xs text-theme-muted mb-4">Descargá una copia de seguridad de toda la información para evitar pérdida de datos por error humano.</p>
+                                    <button onclick="descargarBackup()" class="w-full bg-theme-card border border-theme-border text-theme-text py-2.5 rounded-xl font-bold shadow-sm hover:border-theme-accent hover:text-theme-accent transition text-sm mb-3 flex items-center justify-center">
+                                        <i class="fas fa-download mr-2"></i> Descargar Copia de Seguridad (JSON)
+                                    </button>
+                                    <label class="w-full bg-theme-card border border-red-500/50 text-red-500 py-2.5 rounded-xl font-bold shadow-sm hover:bg-red-500/10 transition text-sm flex items-center justify-center cursor-pointer">
+                                        <i class="fas fa-upload mr-2"></i> Restaurar desde Archivo (JSON)
+                                        <input type="file" accept=".json" class="hidden" onchange="restaurarBackup(event)">
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB: MANUAL DE USO (ACTUALIZADO) -->
+                <div id="tab-manual" class="tab-content hidden fade-in">
+                    <div class="flex flex-col mb-6">
+                        <h2 class="text-2xl md:text-3xl font-bold text-theme-text mb-1"><i class="fas fa-book text-theme-accent mr-2"></i>Manual de Operaciones</h2>
+                        <p class="text-theme-muted text-sm">Guía rápida para la gestión diaria del sistema.</p>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pb-10">
+                        <div class="bg-theme-card border border-theme-border rounded-2xl p-6 shadow-sm relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-2 h-full bg-green-500"></div>
+                            <h3 class="text-green-500 font-bold text-lg mb-3 border-b border-theme-border pb-2"><i class="fas fa-shopping-cart mr-2"></i>Punto de Venta y Cobros</h3>
+                            <ul class="text-sm text-theme-text opacity-90 space-y-3">
+                                <li><strong>Vender:</strong> Ingresá al Punto de Venta, seleccioná el cliente, el vendedor y buscá los productos. Al "Añadir", armás el carrito. Clic en "Enviar a Caja" para generar el Presupuesto.</li>
+                                <li><strong>Cobrar Presupuesto:</strong> Desde la pestaña "Presupuestos", el Cajero hace clic en "Cobrar". Selecciona el método de pago y el sistema descuenta el stock e imprime el Remito.</li>
+                                <li><strong>Contraentrega:</strong> Si cobrás en domicilio, elegí "Contraentrega". El remito dirá "A COBRAR EN DOMICILIO". Cuando el fletero vuelve con la plata, vas a "Remitos / Entregas" y le das a <span class="bg-green-500 text-white px-1 rounded text-[10px] font-bold">RENDIR CAJA</span>.</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="bg-theme-card border border-theme-border rounded-2xl p-6 shadow-sm relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-2 h-full bg-theme-accent"></div>
+                            <h3 class="text-theme-accent font-bold text-lg mb-3 border-b border-theme-border pb-2"><i class="fas fa-tags mr-2"></i>Listas de Precios y Costos (B2B)</h3>
+                            <ul class="text-sm text-theme-text opacity-90 space-y-3">
+                                <li><strong>Lógica de Precios:</strong> El sistema nunca te pide que tipeés el precio de venta a mano (salvo que quieras poner un Precio Fijo). Vos cargás el <strong>Costo Base</strong> del producto.</li>
+                                <li><strong>Las Listas:</strong> En la solapa "Listas de Costos", creás listas con porcentajes (Ej: Minorista 50%, Mayorista 20%). El sistema multiplica automáticamente el costo base por ese porcentaje para darte el precio final.</li>
+                                <li><strong>Inflación:</strong> Si tu proveedor aumenta los costos, vas a "Importar Excel" en la solapa de Costos, subís la lista nueva, y todos los precios (Minoristas, Web y Mayoristas) se recalculan solos.</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="bg-theme-card border border-theme-border rounded-2xl p-6 shadow-sm relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-2 h-full bg-blue-500"></div>
+                            <h3 class="text-blue-500 font-bold text-lg mb-3 border-b border-theme-border pb-2"><i class="fas fa-id-card-clip mr-2"></i>Sueldos y Comisiones</h3>
+                            <ul class="text-sm text-theme-text opacity-90 space-y-3">
+                                <li><strong>Directorio:</strong> Dás de alta a un vendedor, le asignás un Sueldo Base y un % de comisión. El sistema le crea automáticamente un PIN de acceso (Si el rol es "Vendedor", al ingresar solo verá el Punto de Venta).</li>
+                                <li><strong>Liquidación Mágica:</strong> A fin de mes, vas a la solapa "RRHH y Sueldos". El sistema suma todas las ventas que hizo esa persona en la caja diaria, calcula la comisión, le suma el sueldo base y descuenta las faltas.</li>
+                                <li><strong>Recibos PDF:</strong> En la misma pantalla, elegís al empleado, apretás un botón y te genera un Recibo de Sueldo formal en PDF listo para firmar.</li>
+                            </ul>
+                        </div>
+
+                        <div class="bg-theme-card border border-theme-border rounded-2xl p-6 shadow-sm relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-2 h-full bg-red-500"></div>
+                            <h3 class="text-red-500 font-bold text-lg mb-3 border-b border-theme-border pb-2"><i class="fas fa-undo mr-2"></i>Notas de Crédito y Anulaciones</h3>
+                            <ul class="text-sm text-theme-text opacity-90 space-y-3">
+                                <li><strong>Emitir N.C.:</strong> En "Remitos / Entregas", buscá el remito del cliente que devuelve la mercadería y seleccioná "Nota Crédito". Elegí si fue por arrepentimiento (vuelve al stock) o por rotura (no vuelve al stock).</li>
+                                <li><strong>Impacto Contable:</strong> Al emitir la N.C., el sistema generará automáticamente un "Gasto" (Egreso) en la Caja Diaria para reflejar que le devolviste el dinero al cliente.</li>
+                                <li><strong>Documento Oficial:</strong> El remito original pasará a estado "Anulado" y aparecerá un botón rojo para imprimir la Nota de Crédito oficial en PDF con los items devueltos.</li>
+                            </ul>
+                        </div>
+
+                        <div class="bg-theme-card border border-theme-border rounded-2xl p-6 shadow-sm relative overflow-hidden md:col-span-2">
+                            <div class="absolute top-0 right-0 w-2 h-full bg-yellow-500"></div>
+                            <h3 class="text-yellow-500 font-bold text-lg mb-3 border-b border-theme-border pb-2"><i class="fas fa-chart-pie mr-2"></i>Rentabilidad Neta y Financiera</h3>
+                            <ul class="text-sm text-theme-text opacity-90 space-y-3">
+                                <li><strong>Gastos Fijos:</strong> Cargá alquiler, luz, sueldos fijos en el tablero de Rentabilidad (Abajo a la derecha). El sistema permite clonarlos de un mes a otro.</li>
+                                <li><strong>Rentabilidad Real:</strong> El sistema cruza lo vendido vs el Costo Directo (CMV), los Gastos Variables (Tarjetas/Comisiones) y los Gastos Fijos para decirte cuánto ganaste de forma limpia. Las ventas web se separan del local para su análisis.</li>
+                                <li><strong>Simulador de Objetivos:</strong> Te dice exactamente cuántos pesos tenés que vender en el mes para cubrir tus costos fijos y llevarte la ganancia libre que vos pongas como objetivo.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ================= CATÁLOGO PÚBLICO (MODO WEBSTORE / EXTERNO) ================= -->
+    <div id="public-catalog" class="hidden flex-col fixed inset-0 bg-theme-base z-[99999] overflow-y-auto">
+        <header class="bg-theme-card border-b border-theme-border sticky top-0 z-10 px-4 md:px-8 py-4 flex justify-between items-center shadow-md">
+            <div class="flex items-center gap-3">
+                <img id="store-logo" src="https://via.placeholder.com/150/FFFFFF/8b949e?text=Logo" class="w-10 h-10 object-cover rounded-lg border border-theme-border">
+                <div>
+                    <h1 id="store-name" class="text-xl font-bold text-theme-text">Mi Tienda</h1>
+                    <span class="text-[10px] text-green-500 font-bold block"><i class="fas fa-check-circle mr-1"></i> Stock en Vivo</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <button onclick="abrirCarritoWeb()" class="relative text-theme-text hover:text-theme-accent text-2xl transition bg-theme-panel border border-theme-border w-11 h-11 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-shopping-bag"></i>
+                    <span id="cart-badge" class="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full hidden">0</span>
+                </button>
+            </div>
+        </header>
+        <div class="px-4 md:px-8 py-6 bg-theme-panel border-b border-theme-border">
+            <div class="max-w-4xl mx-auto relative">
+                <i class="fas fa-search absolute left-4 top-3.5 text-theme-muted"></i>
+                <input type="text" id="buscador-tienda" placeholder="Buscar productos por nombre o código SKU..." oninput="debouncedRenderTienda()" class="w-full bg-theme-card border border-theme-border text-theme-text pl-12 pr-4 py-3 rounded-xl font-bold focus:border-theme-accent outline-none shadow-sm">
+            </div>
+        </div>
+        <div class="flex-grow p-4 md:p-8 overflow-y-auto">
+            <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6" id="grid-productos-tienda">
+            </div>
+        </div>
+        
+        <a id="btn-wa-flotante" href="#" target="_blank" class="fixed bottom-6 right-6 bg-[#25d366] text-white w-14 h-14 rounded-full flex items-center justify-center text-3xl shadow-lg hover:scale-110 hover:bg-[#1ebe5d] transition-all z-[999999] hidden">
+            <i class="fab fa-whatsapp"></i>
+        </a>
+    </div>
+
+    <!-- MODAL CARRITO WEB Y CHECKOUT DIRECTO -->
+    <div id="modal-carrito-web" class="fixed inset-0 bg-theme-base/90 hidden items-center justify-center p-4 backdrop-blur-sm" style="z-index: 999999;">
+        <div class="bg-theme-card border border-theme-border rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden fade-in flex flex-col max-h-[90vh]">
+            <div class="p-5 border-b border-theme-border bg-theme-panel flex justify-between items-center">
+                <h3 class="text-lg font-bold text-theme-text"><i class="fas fa-shopping-cart text-theme-accent mr-2"></i> Tu Pedido Online</h3>
+                <button onclick="cerrarModal('modal-carrito-web')" class="text-theme-muted hover:text-red-500 text-xl transition"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <div class="flex-grow overflow-y-auto p-4 space-y-3" id="lista-carrito-web"></div>
+            
+            <div class="p-5 bg-theme-panel border-t border-theme-border space-y-3">
+                <div class="bg-red-500/10 border border-red-500/30 rounded-xl p-3 mb-2">
+                    <p class="text-[10px] text-red-500 font-bold"><i class="fas fa-info-circle mr-1"></i> TODOS los datos son obligatorios para enviar el pedido.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                    <div>
+                        <label class="text-[9px] font-bold text-theme-muted uppercase block mb-1">Nombre Completo <span class="text-red-500">*</span></label>
+                        <input type="text" id="web-cli-nombre" placeholder="Tu Nombre" class="w-full border border-theme-border p-2 rounded-lg bg-theme-card text-theme-text outline-none focus:border-theme-accent" required>
+                    </div>
+                    <div>
+                        <label class="text-[9px] font-bold text-theme-muted uppercase block mb-1">Teléfono <span class="text-red-500">*</span></label>
+                        <input type="text" id="web-cli-tel" placeholder="Ej: 11 2233 4455" class="w-full border border-theme-border p-2 rounded-lg bg-theme-card text-theme-text outline-none focus:border-theme-accent" required>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="text-[9px] font-bold text-theme-muted uppercase block mb-1">Entrega / Dirección <span class="text-red-500">*</span></label>
+                        <input type="text" id="web-cli-dir" placeholder="Dirección de entrega o 'Retiro en Local'" class="w-full border border-theme-border p-2 rounded-lg bg-theme-card text-theme-text outline-none focus:border-theme-accent" required>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center pt-2 border-t border-theme-border mt-2">
+                    <span class="text-theme-muted font-bold uppercase text-xs">Total de la Compra</span>
+                    <h3 class="text-2xl font-black text-green-500" id="total-carrito-web">$0</h3>
+                </div>
+
+                <button onclick="finalizarCompraWebYDescontarStock()" class="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-xl font-bold shadow-md transition flex justify-center items-center text-sm mt-2">
+                    <i class="fab fa-whatsapp mr-2 text-lg"></i> Confirmar Pedido Seguro
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= MODALES ERP ================= -->
+    <div id="modal-confirm" class="fixed inset-0 bg-theme-base/90 hidden items-center justify-center p-4 backdrop-blur-sm" style="z-index: 999999;">
+        <div class="bg-theme-card border border-theme-border rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden text-center p-6 fade-in">
+            <div class="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl border border-red-500/30"><i class="fas fa-exclamation-triangle"></i></div>
+            <h3 class="text-xl font-bold text-theme-text mb-2">¿Estás seguro/a?</h3>
+            <p id="confirm-msg" class="text-sm text-theme-muted mb-6 font-medium">Esta acción no se puede deshacer.</p>
+            <div class="flex gap-3">
+                <button onclick="cerrarModal('modal-confirm')" class="flex-1 bg-theme-panel text-theme-muted border border-theme-border py-3 rounded-xl font-bold hover:border-theme-accent transition">Cancelar</button>
+                <button id="btn-confirmar-accion" onclick="if(accionPendiente) accionPendiente(); cerrarModal('modal-confirm');" class="flex-1 bg-red-500 text-white py-3 rounded-xl font-bold hover:bg-red-600 transition shadow-sm">Sí, confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-cobro" class="fixed inset-0 bg-theme-base/90 hidden items-center justify-center p-4 backdrop-blur-sm" style="z-index: 999998;">
+        <div class="bg-theme-card border border-theme-border rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden fade-in">
+            <div class="p-6 border-b border-theme-border bg-theme-panel flex justify-between items-center">
+                <h3 class="text-xl font-bold text-theme-text">Cobrar e Imprimir Remito</h3>
+                <button onclick="cerrarModal('modal-cobro')" class="text-theme-muted hover:text-red-500 text-xl"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="cobro-presupuesto-id">
+                <div class="bg-theme-card border border-theme-accent/30 rounded-xl p-4 text-center mb-4 shadow-sm">
+                    <p class="text-[10px] font-bold text-theme-accent uppercase tracking-widest mb-1">A Cobrar</p>
+                    <h3 class="text-4xl font-black text-theme-text" id="cobro-monto-total">$0</h3>
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Medio de Pago</label>
+                    <select id="cobro-metodo" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-theme-accent">
+                        <option value="Efectivo">💵 Efectivo (Billetes)</option>
+                        <option value="Mercado Pago">📱 Mercado Pago</option>
+                        <option value="Transferencia">🏦 Transferencia / Tarjeta</option>
+                        <option value="Contraentrega">🚚 Contraentrega (A rendir por chofer)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="p-4 border-t border-theme-border bg-theme-panel flex justify-end gap-3">
+                <button id="btn-conf-cobro" onclick="confirmarCobroPresupuesto()" class="w-full bg-green-500 text-white font-bold py-3 rounded-xl shadow-md hover:bg-green-600 transition flex items-center justify-center">
+                    <i class="fas fa-print mr-2"></i> Procesar e Imprimir Remito
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-rendicion" class="fixed inset-0 bg-theme-base/90 hidden items-center justify-center p-4 backdrop-blur-sm" style="z-index: 999998;">
+        <div class="bg-theme-card border border-theme-border rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden fade-in">
+            <div class="p-6 border-b border-theme-border flex justify-between items-center bg-theme-panel">
+                <h3 class="text-xl font-bold text-theme-text"><i class="fas fa-hand-holding-usd text-green-500 mr-2"></i> Rendir Dinero</h3>
+                <button onclick="cerrarModal('modal-rendicion')" class="text-theme-muted hover:text-red-500 text-xl"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="rendir-id">
+                <p class="text-sm text-theme-muted">Ingresa el dinero a la caja. ¿Cómo pagó finalmente el cliente al chofer?</p>
+                <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Método de Pago Real</label>
+                <select id="rendir-metodo-real" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-theme-accent">
+                    <option value="Efectivo">Efectivo (Billetes)</option>
+                    <option value="Mercado Pago">Mercado Pago</option>
+                    <option value="Transferencia">Transferencia</option>
+                </select>
+            </div>
+            <div class="p-4 border-t border-theme-border bg-theme-panel">
+                <button id="btn-conf-rendicion" onclick="confirmarRendicion()" class="w-full bg-green-500 text-white font-bold py-3 rounded-xl hover:bg-green-600 transition shadow-sm">Confirmar Ingreso a Caja Diaria</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-nc" class="fixed inset-0 bg-theme-base/90 hidden items-center justify-center p-4 backdrop-blur-sm" style="z-index: 999998;">
+        <div class="bg-theme-card border border-theme-border rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden fade-in">
+            <div class="p-6 border-b border-theme-border flex justify-between items-center bg-theme-panel">
+                <h3 class="text-xl font-bold text-theme-text"><i class="fas fa-undo text-red-500 mr-2"></i> Nota de Crédito</h3>
+                <button onclick="cerrarModal('modal-nc')" class="text-theme-muted hover:text-red-500 text-xl"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="nc-id">
+                <div class="bg-red-500/10 border border-red-500/30 rounded-xl p-3 mb-2">
+                    <p class="text-xs text-red-500 font-bold"><i class="fas fa-info-circle mr-1"></i> Se anulará el remito y se emitirá un gasto automático en la caja diaria.</p>
+                </div>
+                <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Motivo y Destino del Stock</label>
+                <select id="nc-motivo" class="w-full border border-red-500/50 p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-red-500">
+                    <option value="arrepentimiento">Arrepentimiento / Cambio (Devolver items al Stock)</option>
+                    <option value="falla">Roto / Falla (Perdido, NO vuelve a Stock)</option>
+                </select>
+            </div>
+            <div class="p-4 border-t border-theme-border bg-theme-panel">
+                <button id="btn-conf-nc" onclick="confirmarNC()" class="w-full bg-red-500 text-white font-bold py-3 rounded-xl shadow-sm hover:bg-red-600 transition">Emitir N.C y Anular Remito</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-empleado" class="fixed inset-0 bg-theme-base/90 hidden items-center justify-center p-4 backdrop-blur-sm" style="z-index: 999998;">
+        <div class="bg-theme-card border border-theme-border rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden fade-in">
+            <div class="p-6 border-b border-theme-border bg-theme-panel flex justify-between items-center">
+                <h3 class="text-xl font-bold text-theme-text" id="modal-empleado-title">Ficha de Empleado y Acceso</h3>
+                <button onclick="cerrarModal('modal-empleado')" class="text-theme-muted hover:text-red-500 text-xl"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                <input type="hidden" id="emp-id">
+                <h4 class="text-sm font-bold text-theme-accent border-b border-theme-border pb-2">1. Datos Personales</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-2">
+                        <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Nombre Completo (Usuario)</label>
+                        <input type="text" id="emp-nombre" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-theme-accent" required>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Teléfono Contacto</label>
+                        <input type="text" id="emp-tel" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-theme-accent">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Teléfono Familiar</label>
+                        <input type="text" id="emp-telfam" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-theme-accent">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Dirección</label>
+                        <input type="text" id="emp-dir" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-theme-accent">
+                    </div>
+                </div>
+
+                <h4 class="text-sm font-bold text-green-500 border-b border-theme-border pb-2 mt-6">2. Contratación</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Fecha de Ingreso</label>
+                        <input type="date" id="emp-ingreso" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-green-500">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Sueldo Base ($)</label>
+                        <input type="number" id="emp-sueldo" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-green-500" required>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Comisión (%)</label>
+                        <input type="number" id="emp-comision" step="0.1" value="1.5" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-theme-accent" required>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Modalidad de Pago</label>
+                        <select id="emp-modalidad" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-green-500">
+                            <option value="Mensual">Mensual</option>
+                            <option value="Quincenal">Quincenal</option>
+                            <option value="Semanal">Semanal</option>
+                        </select>
+                    </div>
+                </div>
+
+                <h4 class="text-sm font-bold text-red-500 border-b border-theme-border pb-2 mt-6">3. Permisos de Acceso</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-[10px] font-bold text-red-500 uppercase tracking-widest block mb-1">PIN de Ingreso (4 dígitos)</label>
+                        <input type="text" id="emp-pin" maxlength="4" placeholder="1234" class="w-full border border-red-500/30 p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text text-center tracking-[0.5em] focus:border-red-500" required>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-red-500 uppercase tracking-widest block mb-1">Rol en el Sistema</label>
+                        <select id="emp-rol" class="w-full border border-red-500/30 p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-red-500">
+                            <option value="vendedor">Vendedor (Solo Factura y Lectura Catálogo)</option>
+                            <option value="cajero">Cajero (Cobra y Remito)</option>
+                            <option value="admin">Administrador (Total)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="p-4 border-t border-theme-border bg-theme-panel flex justify-end gap-3">
+                <button onclick="guardarEmpleado()" class="bg-theme-accent text-theme-accentText px-8 py-3 rounded-xl font-bold shadow-md hover:bg-theme-accentHover transition w-full">Guardar Ficha y Accesos</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-stock" class="fixed inset-0 bg-theme-base/90 hidden items-center justify-center p-4 backdrop-blur-sm" style="z-index: 999998;">
+        <div class="bg-theme-card border border-theme-border rounded-3xl w-full max-w-md shadow-2xl overflow-hidden fade-in">
+            <div class="p-6 border-b border-theme-border bg-theme-panel flex justify-between items-center"><h3 class="text-xl font-bold text-theme-text" id="modal-stock-title">Artículo</h3><button onclick="cerrarModal('modal-stock')" class="text-theme-muted hover:text-red-500 text-xl"><i class="fas fa-times"></i></button></div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="stock-id">
+                <div><label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">SKU / Código Numérico</label><input type="text" id="stock-sku" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-theme-accent" required></div>
+                <div><label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Nombre</label><input type="text" id="stock-nombre" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-theme-accent" required></div>
+                <div class="admin-only"><label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Costo Base ($)</label><input type="number" id="stock-costo" step="0.01" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-theme-accent"></div>
+                <div><label class="text-[10px] font-bold text-green-500 uppercase tracking-widest block mb-1">Precio Fijo Web/Local (Dejar 0 para usar margen)</label><input type="number" id="stock-precio-manual" placeholder="0" class="w-full border border-green-500/50 p-3 rounded-xl bg-green-500/10 outline-none text-sm font-bold text-theme-text focus:border-green-500"></div>
+                <div><label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Stock Físico</label><input type="number" id="stock-cantidad" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text focus:border-theme-accent" required></div>
+            </div>
+            <div class="p-4 border-t border-theme-border bg-theme-panel flex justify-end"><button onclick="guardarStock()" class="w-full bg-theme-accent text-theme-accentText py-3 rounded-xl font-bold transition hover:bg-theme-accentHover">Guardar</button></div>
+        </div>
+    </div>
+
+    <div id="modal-lista" class="fixed inset-0 bg-theme-base/90 hidden items-center justify-center p-4 backdrop-blur-sm" style="z-index: 999998;">
+        <div class="bg-theme-card border border-theme-border rounded-3xl w-full max-w-md shadow-2xl overflow-hidden fade-in">
+            <div class="p-6 border-b border-theme-border bg-theme-panel flex justify-between items-center"><h3 class="text-xl font-bold text-theme-text" id="modal-lista-title">Lista</h3><button onclick="cerrarModal('modal-lista')" class="text-theme-muted hover:text-red-500 text-xl"><i class="fas fa-times"></i></button></div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="lista-id">
+                <div><label class="text-[10px] font-bold text-theme-muted uppercase tracking-widest block mb-1">Nombre</label><input type="text" id="lista-nombre" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel outline-none text-sm font-bold text-theme-text" required></div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="text-[10px] font-bold text-theme-accent uppercase tracking-widest block mb-1">Remarque (%)</label><input type="number" step="0.1" id="lista-margen" class="w-full border border-theme-accent/30 p-2 rounded-lg bg-theme-panel outline-none text-sm text-center text-theme-text" required></div>
+                    <div><label class="text-[10px] font-bold text-red-500 uppercase tracking-widest block mb-1">Costo Var (%)</label><input type="number" step="0.1" id="lista-costo-var" class="w-full border border-red-500/30 p-2 rounded-lg bg-theme-panel outline-none text-sm text-center text-theme-text"></div>
+                </div>
+            </div>
+            <div class="p-4 border-t border-theme-border bg-theme-panel flex justify-end"><button onclick="guardarLista()" class="w-full bg-theme-accent text-theme-accentText py-3 rounded-xl font-bold transition hover:bg-theme-accentHover">Guardar</button></div>
+        </div>
+    </div>
+
+    <div id="modal-cliente" class="fixed inset-0 bg-theme-base/90 hidden items-center justify-center p-4 backdrop-blur-sm" style="z-index: 999998;">
+        <div class="bg-theme-card border border-theme-border rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden fade-in">
+            <div class="p-6 border-b border-theme-border bg-theme-panel flex justify-between items-center"><h3 class="text-xl font-bold text-theme-text" id="modal-cliente-title">Cliente</h3><button onclick="cerrarModal('modal-cliente')" class="text-theme-muted hover:text-red-500 text-xl"><i class="fas fa-times"></i></button></div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="cliente-id">
+                <div><label class="text-[10px] font-bold text-theme-muted uppercase block mb-1">Nombre / Apellido</label><input type="text" id="m-cli-nombre" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel text-theme-text" required></div>
+                <div><label class="text-[10px] font-bold text-theme-muted uppercase block mb-1">Teléfono</label><input type="text" id="m-cli-tel" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel text-theme-text"></div>
+                <div><label class="text-[10px] font-bold text-theme-muted uppercase block mb-1">Dirección</label><input type="text" id="m-cli-dir" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel text-theme-text"></div>
+                <div><label class="text-[10px] font-bold text-theme-muted uppercase block mb-1">Tipo</label><select id="m-cli-tipo" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel text-theme-text"><option value="Minorista">Minorista</option><option value="Mayorista">Mayorista</option></select></div>
+                
+                <div id="m-cli-historial-container" class="mt-4 hidden border-t border-theme-border pt-4">
+                    <h4 class="text-[10px] font-bold text-theme-accent uppercase mb-2">Últimas Compras</h4>
+                    <div id="m-cli-historial-lista" class="max-h-32 overflow-y-auto space-y-2 pr-1"></div>
+                </div>
+            </div>
+            <div class="p-4 border-t border-theme-border bg-theme-panel"><button onclick="guardarClienteModal()" class="w-full bg-theme-accent text-theme-accentText py-3 rounded-xl font-bold transition hover:bg-theme-accentHover">Guardar</button></div>
+        </div>
+    </div>
