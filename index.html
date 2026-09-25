@@ -22,27 +22,19 @@
                 extend: {
                     colors: {
                         theme: {
-                            base: 'var(--bg-base)',
-                            card: 'var(--bg-card)',
-                            panel: 'var(--bg-panel)',
-                            border: 'var(--border-color)',
-                            text: 'var(--text-main)',
-                            muted: 'var(--text-muted)',
-                            accent: 'var(--accent)',
-                            accentHover: 'var(--accent-hover)',
-                            accentText: 'var(--accent-text)',
+                            base: 'var(--bg-base)', card: 'var(--bg-card)', panel: 'var(--bg-panel)',
+                            border: 'var(--border-color)', text: 'var(--text-main)', muted: 'var(--text-muted)',
+                            accent: 'var(--accent)', accentHover: 'var(--accent-hover)', accentText: 'var(--accent-text)',
                         }
                     },
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    }
+                    fontFamily: { sans: ['Inter', 'sans-serif'], }
                 }
             }
         }
     </script>
     <style>
         /* MOTOR DE TEMAS MULTICOLOR */
-        :root, :root[data-theme="luxe"] { --bg-base: #FCFBF8; --bg-pattern: #F2EBE5; --bg-card: #FFFFFF; --bg-panel: #FFF8F5; --border-color: #E8DCD5; --text-main: #3E1C2D; --text-muted: #8A727D; --accent: #EA512C; --accent-hover: #C93D1B; --accent-text: #FFFFFF; --success: #10b981; --danger: #ef4444; }
+        :root, :root[data-theme="luxe"] { --bg-base: #F8F9FA; --bg-pattern: #E9ECEF; --bg-card: #FFFFFF; --bg-panel: #F1F3F5; --border-color: #DEE2E6; --text-main: #212529; --text-muted: #6C757D; --accent: #4F46E5; --accent-hover: #4338CA; --accent-text: #FFFFFF; --success: #10b981; --danger: #ef4444; }
         :root[data-theme="zen"] { --bg-base: #F5F4F0; --bg-pattern: #E3DFD5; --bg-card: #FFFFFF; --bg-panel: #EAE8E0; --border-color: #D3CEBE; --text-main: #4A463B; --text-muted: #9E988A; --accent: #8E9C7E; --accent-hover: #758366; --accent-text: #FFFFFF; --success: #10b981; --danger: #d97706; }
         :root[data-theme="ocean"] { --bg-base: #F0F4F8; --bg-pattern: #D9E2EC; --bg-card: #FFFFFF; --bg-panel: #F8FAFC; --border-color: #CBD5E1; --text-main: #1E293B; --text-muted: #64748B; --accent: #0EA5E9; --accent-hover: #0284C7; --accent-text: #FFFFFF; --success: #10b981; --danger: #ef4444; }
         :root[data-theme="rose"] { --bg-base: #FFFAF9; --bg-pattern: #FCE7F3; --bg-card: #FFFFFF; --bg-panel: #FFF1F2; --border-color: #FBCFE8; --text-main: #4C1D95; --text-muted: #9D174D; --accent: #F43F5E; --accent-hover: #E11D48; --accent-text: #FFFFFF; --success: #10b981; --danger: #ef4444; }
@@ -61,7 +53,7 @@
         .toast { padding: 12px 24px; border-radius: 8px; color: var(--accent-text); background-color: var(--accent); font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.2); animation: slideIn 0.3s forwards; }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         
-        .cargando-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.8); display: flex; align-items: center; justify-content: center; z-index: 9999999; backdrop-filter: blur(5px); transition: opacity 0.3s ease; }
+        .cargando-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); display: flex; align-items: center; justify-content: center; z-index: 9999999; backdrop-filter: blur(5px); transition: opacity 0.3s ease; }
         .cargando-spinner { width: 40px; height: 40px; border: 4px solid var(--border-color); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
         
@@ -461,11 +453,27 @@
                             <p class="text-theme-muted text-sm">Gestioná inventario por SKU, procesá fotos ultralivianas y activá tu tienda pública.</p>
                         </div>
                         <div class="flex flex-col md:flex-row gap-2 w-full md:w-auto">
-                            <button onclick="abrirModalStock()" class="admin-only w-full md:w-auto bg-theme-accent text-theme-accentText px-4 py-2.5 rounded-xl font-bold shadow-md hover:bg-theme-accentHover transition flex justify-center items-center text-sm"><i class="fas fa-plus mr-1"></i> Nuevo Artículo</button>
+                            <button onclick="abrirCatalogoEnNuevaPestana()" class="w-full md:w-auto bg-[#8B5CF6] text-white px-4 py-2.5 rounded-xl font-bold shadow-md hover:bg-[#7C3AED] transition flex justify-center items-center text-sm">
+                                <i class="fas fa-store mr-2"></i> Ver Catálogo Web
+                            </button>
+                            <button onclick="generarPDFCatalogo()" class="w-full md:w-auto bg-theme-card text-theme-accent border border-theme-border px-4 py-2.5 rounded-xl font-bold hover:bg-theme-panel transition flex justify-center items-center text-sm">
+                                <i class="fas fa-file-pdf mr-2"></i> Descargar PDF
+                            </button>
+                            <button onclick="abrirModalStock()" class="admin-only w-full md:w-auto bg-theme-accent text-theme-accentText px-4 py-2.5 rounded-xl font-bold shadow-md hover:bg-theme-accentHover transition flex justify-center items-center text-sm">
+                                <i class="fas fa-plus mr-1"></i> Nuevo Artículo
+                            </button>
                         </div>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                        <div class="md:col-span-3 relative bg-theme-card rounded-2xl shadow-sm border border-theme-border flex items-center h-full">
+                        <div class="admin-only bg-theme-card p-5 rounded-2xl shadow-sm border border-theme-border">
+                            <h3 class="text-sm font-bold text-theme-text mb-2"><i class="fas fa-bolt text-theme-accent mr-2"></i> Procesador Rápido de Imágenes</h3>
+                            <p class="text-[10px] text-theme-muted mb-4">Sube imágenes en lote. Las optimiza a 250px ultralivianas y las vincula al SKU o Nombre del producto.</p>
+                            <label class="bg-theme-panel text-theme-text border border-theme-border font-bold px-4 py-2.5 rounded-xl shadow-sm flex items-center justify-center text-sm cursor-pointer w-full transition hover:border-theme-accent hover:text-theme-accent">
+                                <i class="fas fa-images mr-2"></i> Seleccionar Imágenes
+                                <input type="file" multiple accept="image/*" class="hidden" id="input-imagenes-catalogo" onchange="procesarImagenesCatalogo(event)">
+                            </label>
+                        </div>
+                        <div class="md:col-span-2 relative bg-theme-card rounded-2xl shadow-sm border border-theme-border flex items-center h-full">
                             <i class="fas fa-search absolute left-5 text-theme-muted text-lg"></i>
                             <input type="text" id="buscador-stock" placeholder="Buscar por SKU o Nombre..." oninput="debouncedRenderStock()" class="w-full h-full pl-14 pr-14 border-none bg-transparent outline-none font-bold text-theme-text rounded-2xl">
                         </div>
@@ -490,6 +498,19 @@
                             <p class="text-theme-muted text-sm">Control central de márgenes, costos variables y utilidades netas.</p>
                         </div>
                         <div class="flex flex-col md:flex-row gap-2 w-full md:w-auto admin-only">
+                            <button onclick="forzarReparacionPrecios()" class="bg-yellow-500/10 text-yellow-600 border border-yellow-500/40 font-bold px-4 py-2.5 rounded-xl shadow-sm flex items-center justify-center text-sm hover:bg-yellow-500 hover:text-white transition">
+                                <i class="fas fa-magic mr-2"></i> Limpiar Precios
+                            </button>
+                            <button onclick="exportarPreciosExcel()" class="bg-green-500 text-white font-bold px-4 py-2.5 rounded-xl shadow-sm flex items-center justify-center text-sm hover:bg-green-600 transition">
+                                <i class="fas fa-file-excel mr-2"></i> Exportar Precios
+                            </button>
+                            <button onclick="descargarPlantilla('stock')" class="bg-theme-card text-theme-accent border border-theme-border font-bold px-4 py-2.5 rounded-xl shadow-sm flex items-center justify-center text-sm hover:bg-theme-panel transition">
+                                <i class="fas fa-download mr-2"></i> Plantilla Excel
+                            </button>
+                            <label class="btn-excel font-bold px-4 py-2.5 rounded-xl shadow-sm flex items-center justify-center text-sm cursor-pointer w-full md:w-auto transition">
+                                <i class="fas fa-file-import mr-2"></i> Importar Excel
+                                <input type="file" accept=".xlsx, .xls" class="hidden" onchange="importarExcel('stock', event)">
+                            </label>
                             <button onclick="abrirModalLista()" class="bg-theme-accent text-theme-accentText px-5 py-2.5 rounded-xl font-bold shadow-md hover:bg-theme-accentHover transition flex justify-center items-center text-sm">
                                 <i class="fas fa-plus mr-2"></i> Nueva Lista
                             </button>
@@ -515,6 +536,13 @@
                             <p class="text-theme-muted text-sm">Alta de empleados y creación automática de Usuarios / PINes de acceso.</p>
                         </div>
                         <div class="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+                            <button onclick="descargarPlantilla('empleados')" class="bg-theme-card text-theme-accent border border-theme-border font-bold px-4 py-2.5 rounded-xl shadow-sm flex items-center justify-center text-sm hover:bg-theme-panel transition">
+                                <i class="fas fa-download mr-2"></i> Plantilla RRHH
+                            </button>
+                            <label class="btn-excel font-bold px-4 py-2.5 rounded-xl shadow-sm flex items-center justify-center text-sm cursor-pointer w-full md:w-auto transition">
+                                <i class="fas fa-file-import mr-2"></i> Importar Masivo
+                                <input type="file" accept=".xlsx, .xls" class="hidden" onchange="importarExcel('empleados', event)">
+                            </label>
                             <button onclick="abrirModalEmpleado()" class="bg-theme-accent hover:bg-theme-accentHover text-theme-accentText px-4 py-2.5 rounded-xl font-bold transition text-sm shadow-md"><i class="fas fa-user-plus mr-1"></i> Alta Empleado</button>
                         </div>
                     </div>
@@ -648,6 +676,10 @@
                             <div class="bg-theme-card p-5 rounded-2xl shadow-sm border border-theme-border relative">
                                 <div class="flex justify-between items-start mb-1">
                                     <p class="text-[10px] font-bold text-theme-muted uppercase tracking-widest">1. VENTAS TOTALES</p>
+                                    <div class="tooltip-container">
+                                        <i class="fas fa-question-circle text-theme-muted hover:text-theme-accent transition"></i>
+                                        <span class="tooltip-text">Volumen total de dinero que ingresó al comercio en el mes (Suma de remitos y cobros). Separado por canal para análisis.</span>
+                                    </div>
                                 </div>
                                 <h3 class="text-2xl font-bold text-green-500" id="rent-ingresos">$ 0</h3>
                                 <div class="mt-2 flex justify-between text-[10px] bg-theme-panel p-2 rounded-lg border border-theme-border">
@@ -659,6 +691,10 @@
                             <div class="bg-theme-card p-5 rounded-2xl shadow-sm border border-theme-border relative">
                                 <div class="flex justify-between items-start mb-1">
                                     <p class="text-[10px] font-bold text-theme-muted uppercase tracking-widest">2. COSTO DIRECTO (CMV)</p>
+                                    <div class="tooltip-container">
+                                        <i class="fas fa-question-circle text-theme-muted hover:text-theme-accent transition"></i>
+                                        <span class="tooltip-text">Plata que la empresa invirtió originalmente al proveedor para comprar la mercadería que se vendió hoy.</span>
+                                    </div>
                                 </div>
                                 <h3 class="text-2xl font-bold text-yellow-500" id="rent-costos">$ 0</h3>
                                 <p class="text-[10px] text-theme-muted mt-1">Costo de la mercadería vendida</p>
@@ -666,6 +702,10 @@
                             <div class="bg-theme-card p-5 rounded-2xl shadow-sm border border-theme-border relative">
                                 <div class="flex justify-between items-start mb-1">
                                     <p class="text-[10px] font-bold text-theme-muted uppercase tracking-widest">3. COSTOS VARIABLES</p>
+                                    <div class="tooltip-container">
+                                        <i class="fas fa-question-circle text-theme-muted hover:text-theme-accent transition"></i>
+                                        <span class="tooltip-text">Gastos que nacen SOLO al vender: Impuestos (IIBB), comisiones de tarjetas, Mercado Pago y comisiones de vendedores.</span>
+                                    </div>
                                 </div>
                                 <h3 class="text-2xl font-bold text-red-500" id="rent-gastos-variables">$ 0</h3>
                                 <p class="text-[10px] text-theme-muted mt-1">Impuestos y comisiones de venta</p>
@@ -673,6 +713,10 @@
                             <div class="bg-theme-accent/10 p-5 rounded-2xl shadow-inner border border-theme-accent/30 relative">
                                 <div class="flex justify-between items-start mb-1">
                                     <p class="text-[10px] font-bold text-theme-accent uppercase tracking-widest">4. MARGEN DE CONTRIBUCIÓN</p>
+                                    <div class="tooltip-container">
+                                        <i class="fas fa-question-circle text-theme-accent/50 hover:text-theme-accent transition"></i>
+                                        <span class="tooltip-text">Plata real que queda en mano DESPUÉS de pagar el producto y los costos de venta. Se usa para pagar los Gastos Fijos.</span>
+                                    </div>
                                 </div>
                                 <h3 class="text-2xl font-bold text-theme-accent" id="rent-contribucion">$ 0</h3>
                                 <p class="text-[10px] text-theme-accent/70 mt-1">Plata disponible para pagar fijos</p>
@@ -680,6 +724,10 @@
                             <div id="rent-card-neta" class="md:col-span-2 bg-theme-accent p-6 rounded-2xl shadow-md relative text-theme-accentText transition-colors mt-2">
                                 <div class="flex justify-between items-start mb-1">
                                     <p class="text-[10px] font-bold opacity-80 uppercase tracking-widest" id="rent-neta-label">RESULTADO NETO LIMPIO</p>
+                                    <div class="tooltip-container">
+                                        <i class="fas fa-question-circle opacity-40 hover:opacity-100 transition"></i>
+                                        <span class="tooltip-text">Ganancia pura de la empresa. Se calcula restando los Gastos Fijos (Alquiler, Sueldos) al Margen de Contribución.</span>
+                                    </div>
                                 </div>
                                 <div class="flex items-end gap-4">
                                     <h3 class="text-4xl font-black" id="rent-neta">$ 0</h3>
@@ -687,6 +735,10 @@
                                 </div>
                             </div>
                             <div class="md:col-span-2 bg-theme-card p-6 rounded-2xl shadow-sm border border-theme-border mt-2 relative">
+                                <div class="absolute right-4 top-4 tooltip-container">
+                                    <i class="fas fa-question-circle text-theme-muted hover:text-theme-accent transition text-lg"></i>
+                                    <span class="tooltip-text">Calcula automáticamente cuánto debés facturar en total para poder cubrir toda tu estructura fija y alcanzar tu meta de dinero libre.</span>
+                                </div>
                                 <h3 class="text-lg font-bold text-theme-accent mb-4"><i class="fas fa-bullseye mr-2"></i> Simulador de Objetivos Comerciales</h3>
                                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                                     <div><label class="text-[10px] font-bold text-theme-muted uppercase block mb-1">Costos Fijos ($)</label><input type="text" inputmode="numeric" id="sim-fijos" class="w-full border border-theme-border p-3 rounded-xl bg-theme-panel text-theme-text" oninput="formatCurrencyInput(this); calcularMeta()"></div>
@@ -805,7 +857,7 @@
                         
                         <div class="bg-theme-card border border-theme-border rounded-2xl p-6 shadow-sm relative overflow-hidden">
                             <div class="absolute top-0 right-0 w-2 h-full bg-blue-500"></div>
-                            <h3 class="text-blue-500 font-bold text-lg mb-3 border-b border-theme-border pb-2"><i class="fas fa-id-card-clip mr-2"></i>Sueldos y Comisiones</h3>
+                            <h3 class="text-blue-500 font-bold text-lg mb-3 border-b border-theme-border pb-2"><i class="fas fa-id-card-clip mr-2"></i>Sueldos y Comisiones (RRHH)</h3>
                             <ul class="text-sm text-theme-text opacity-90 space-y-3">
                                 <li><strong>Directorio:</strong> Dás de alta a un vendedor, le asignás un Sueldo Base y un % de comisión. El sistema le crea automáticamente un PIN de acceso (Si el rol es "Vendedor", al ingresar solo verá el Punto de Venta).</li>
                                 <li><strong>Liquidación Mágica:</strong> A fin de mes, vas a la solapa "RRHH y Sueldos". El sistema suma todas las ventas que hizo esa persona en la caja diaria, calcula la comisión, le suma el sueldo base y descuenta las faltas.</li>
@@ -1122,7 +1174,6 @@
             <div class="p-4 border-t border-theme-border bg-theme-panel"><button onclick="guardarClienteModal()" class="w-full bg-theme-accent text-theme-accentText py-3 rounded-xl font-bold transition hover:bg-theme-accentHover">Guardar</button></div>
         </div>
     </div>
-    
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyDsnmGmAaRjIV1QbrNy6Hpn5NZG8yQNY0c",
@@ -1146,7 +1197,7 @@
             setTimeout(() => {
                 const btnLocal = document.getElementById('btn-forzar-local');
                 if(btnLocal && !firebaseLoaded) btnLocal.classList.remove('hidden');
-            }, 3000);
+            }, 2000); // 2 segundos y aparece el botón de emergencia
         });
 
         function purgarFotosYDestrabar() {
@@ -1176,8 +1227,11 @@
 
         function forzarModoLocal() {
             esModoNube = false; firebaseLoaded = true;
-            document.getElementById('carga-overlay-global').classList.add('hidden');
-            document.getElementById('carga-overlay-global').style.display = 'none';
+            const overlay = document.getElementById('carga-overlay-global');
+            if(overlay) {
+                overlay.classList.add('hidden');
+                overlay.style.display = 'none';
+            }
             iniciarAppSegunRouting();
             mostrarToast('Iniciando con memoria local (Offline)', 'bg-yellow-500 text-black');
         }
@@ -1326,7 +1380,7 @@
                 document.getElementById('pantalla-login').classList.add('hidden'); document.getElementById('pantalla-login').classList.remove('flex');
                 document.getElementById('erp-container').classList.remove('hidden'); document.getElementById('erp-container').classList.add('flex');
                 document.getElementById('lbl-usuario-actual').innerText = u.nombre; document.getElementById('lbl-rol-actual').innerText = u.rol; 
-                aplicarPermisosRol(); mostrarToast(`Bienvenido/a, ${u.nombre}`, 'bg-green-500'); 
+                aplicarPermisosRol(); mostrarToast(`Bienvenido/a, ${u.nombre}`, 'bg-theme-accent'); 
             } else { mostrarToast('PIN Incorrecto', 'bg-red-500'); elPin.value = ''; }
         }
         
@@ -1354,8 +1408,10 @@
 
         function importarExcel(tipo, e) {
             let file = e.target.files[0]; if(!file) return;
-            document.getElementById('carga-overlay-msg').innerText = "Procesando Excel de forma segura..."; 
-            document.getElementById('carga-overlay-global').style.display = 'flex'; document.getElementById('carga-overlay-global').classList.remove('hidden');
+            const overlayMsg = document.getElementById('carga-overlay-msg');
+            const overlay = document.getElementById('carga-overlay-global');
+            overlayMsg.innerText = "Procesando Excel de forma segura..."; 
+            overlay.style.display = 'flex'; overlay.classList.remove('hidden');
             let reader = new FileReader();
             reader.onload = function(evt) {
                 try {
@@ -1378,7 +1434,7 @@
                         for(let i=1; i<json.length; i++) { let row = json[i]; if(!row || !row[colNom]) continue; let rawSku = row[colSku] !== undefined ? String(row[colSku]).trim() : ''; let nombre = String(row[colNom]).trim(); let costo = parseNumeroSeguro(row[colCost]); let cant = colCant !== -1 ? Math.max(0, parseInt(row[colCant]) || 0) : 0; let existente = db.productos.find(p => (rawSku && p.sku === rawSku) || p.nombre.toLowerCase() === nombre.toLowerCase()); if(existente) { existente.sku = rawSku || existente.sku; existente.nombre = nombre; existente.costo = costo; existente.cantidad = cant; actualizados++; } else { db.productos.push({ id: generarId(), sku: rawSku, nombre: nombre, costo: costo, cantidad: cant, imagenBase64: '', precioManual: 0 }); importados++; } }
                     }
                     guardarBD(); actualizarUI(); mostrarToast(`Importación exitosa: ${importados} nuevos, ${actualizados} actualizados.`, 'bg-green-500');
-                } catch (error) { console.error(error); mostrarToast(error.message, "bg-red-500"); } finally { document.getElementById('carga-overlay-global').classList.add('hidden'); document.getElementById('carga-overlay-global').style.display = 'none'; e.target.value = ''; }
+                } catch (error) { console.error(error); mostrarToast(error.message, "bg-red-500"); } finally { overlay.classList.add('hidden'); overlay.style.display = 'none'; e.target.value = ''; }
             }; reader.readAsArrayBuffer(file);
         }
 
@@ -2203,7 +2259,7 @@
             const id = document.getElementById('emp-id').value; const nombre = document.getElementById('emp-nombre').value.trim(); const tel = document.getElementById('emp-tel').value.trim(); const dir = document.getElementById('emp-dir').value.trim(); const telFam = document.getElementById('emp-telfam').value.trim(); const ingreso = document.getElementById('emp-ingreso').value; const modalidadPago = document.getElementById('emp-modalidad').value; const sueldoBase = parseNumeroSeguro(document.getElementById('emp-sueldo').value); const comisionPerc = parseNumeroSeguro(document.getElementById('emp-comision').value); const pin = document.getElementById('emp-pin').value.trim(); const rol = document.getElementById('emp-rol').value;
             if(!nombre || !pin) return mostrarToast('El nombre y el PIN son obligatorios', 'bg-red-500');
             if(id) { const e = db.empleados.find(x => x.id === id); if(e) { e.nombre = nombre; e.tel = tel; e.direccion = dir; e.telFamiliar = telFam; e.fechaIngreso = ingreso; e.modalidadPago = modalidadPago; e.sueldoBase = sueldoBase; e.comisionPerc = comisionPerc; const u = db.usuarios.find(user => user.id === e.idUsuario); if(u) { u.nombre = nombre; u.pin = pin; u.rol = rol; } } } 
-            else { let newUserId = generarId(); db.usuarios.push({ id: newUserId, nombre: nombre, pin: pin, rol: rol }); db.empleados.push({ id: generarId(), idUsuario: newUserId, nombre, tel, direccion: dir, telFamiliar: telFam, fechaIngreso: ingreso, modalidadPago, sueldoBase, comisionPerc }); }
+            else { let newUserId = generarId(); db.usuarios.push({ id: newUserId, nombre: nombre, pin: pin, rol: rol }); db.empleados.push({ id: generarId(), idUsuario: newUserId, nombre, tel, direccion: dir, telFamiliar: telFam, fechaIngreso: ingreso, modalidadPago: 'Mensual', sueldoBase: sueldo, comisionPerc: comision }); }
             guardarBD().then(() => { cerrarModal('modal-empleado'); actualizarUI(); cargarDesplegablesVendedores(); mostrarToast('Ficha guardada', 'bg-green-500'); });
         }
         function borrarEmpleado(id) { pedirConfirmacion('¿Borrar empleado y revocar su acceso al sistema?', () => { const emp = db.empleados.find(e => e.id === id); if(emp) { db.usuarios = db.usuarios.filter(u => u.id !== emp.idUsuario); db.empleados = db.empleados.filter(e => e.id !== id); } guardarBD().then(() => { actualizarUI(); cargarDesplegablesVendedores(); mostrarToast('Empleado eliminado', 'bg-red-500'); }); }); }
